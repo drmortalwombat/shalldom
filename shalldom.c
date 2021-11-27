@@ -223,11 +223,16 @@ int main(void)
 			case ' ':
 				if (selectedUnit == 0xff)
 				{
-					if (gridunits[gcy][gcx] != 0xff)
+					if (gridstate[gcy][gcx] & GS_UNIT)
 					{
 						selectedUnit = gridunits[gcy][gcx];
-						calcMovement(selectedUnit);
-						updateBaseGrid();
+						if ((units[selectedUnit].type & UNIT_TEAM) == UNIT_TEAM_1)
+						{
+							calcMovement(selectedUnit);
+							updateBaseGrid();
+						}
+						else
+							selectedUnit = 0xff;
 					}
 				}
 				else if (gridstate[gcy][gcx] & GS_SELECT)
