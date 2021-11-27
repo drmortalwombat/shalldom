@@ -1,7 +1,7 @@
 #ifndef HEXDISPLAY_H
 #define HEXDISPLAY_H
 
-#include <c64/types.h>
+	#include <c64/types.h>
 
 #define Screen	((byte *)0xc800)
 #define Color	((byte *)0xd800)
@@ -10,8 +10,14 @@
 
 struct Unit
 {
-	char	mx, my, color, type;
+	char	mx, my, type, pad;
 };
+
+#define UNIT_TYPE			0x1f
+#define UNIT_TEAM			0x80
+
+#define UNIT_TEAM_1			0x00
+#define UNIT_TEAM_2			0x80
 
 extern byte gridstate[32][32];
 extern byte gridunits[32][32];
@@ -19,6 +25,7 @@ extern byte gridunits[32][32];
 #define GS_UNIT				0x80
 #define GS_GHOST			0x40
 #define GS_SELECT			0x20
+#define GS_THREATENED		0x10
 
 #define GS_FLAGS			(GS_UNIT | GS_GHOST | GS_SELECT)
 
@@ -50,11 +57,15 @@ void drawUnits(void);
 
 void moveUnit(byte unit, byte x, byte y);
 
-void calcVisibility(void);
+void resetFlags(void);
+
+void calcVisibility(byte team);
+
+void calcThreatened(byte team);
 
 void resetMovement(void);
 
-void calcMovement(byte unit, const byte * cost);
+void calcMovement(byte unit);
 
 void scroll(sbyte dx, sbyte dy);
 

@@ -1,6 +1,8 @@
 #include "hexdisplay.h"
 #include <c64/vic.h>
 
+#include "units.h"
+
 byte gridstate[32][32];
 byte gridunits[32][32];
 
@@ -27,7 +29,7 @@ byte * hexscreen[8] =
 
 const byte sprites[] = {
 
-#embed "sprites.bin"
+#embed "shalldom.bin"
 
 };
 
@@ -151,6 +153,10 @@ const byte gmask1[16][8] =
 static const byte TerrainColor[] = {
 	VCOL_BLUE, VCOL_LT_BLUE, VCOL_YELLOW, VCOL_MED_GREY, VCOL_GREEN, VCOL_LT_GREY, 0, 0,
 	VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY
+}
+
+static const byte TeamColors[] = {
+	VCOL_RED, VCOL_CYAN, 
 }
 
 void overlay(byte cx, byte cy, byte si, byte c)
@@ -588,10 +594,10 @@ void updateBaseGrid(void)
 					if (vstate & GS_FLAGS)
 						drawBaseCell(cx, cy);
 
-					if (gstate & GS_UNIT)
+					if ((gstate & GS_UNIT) && !(gstate & GS_HIDDEN))
 					{
 						byte gi = gridunits[cy + oy][cx + ox];
-						overlay(cx, cy, units[gi].type, units[gi].color);	
+						overlay(cx, cy, units[gi].type & UNIT_TYPE, units[gi].type & UNIT_TEAM ? TeamColors[1] : TeamColors[0]);
 					}
 
 					if (gstate & GS_GHOST)
@@ -657,6 +663,21 @@ byte markVisible(sbyte gx, sbyte gy2, byte m)
 	return 0;
 }
 
+void markThreatened(sbyte gx, sbyte gy2)
+{
+
+	if (gx >= 0 && gx < 32)
+	{
+		sbyte	gy = gy2 >> 1;
+		if (gy >= 0 && gy < 32)
+		{
+			byte	gs = gridstate[gy][gx];
+			gs |= GS_THREATENED;
+			gridstate[gy][gx] = gs;
+		}
+	}
+}
+
 struct MoveNode
 {
 	byte	mx, my2;
@@ -671,15 +692,20 @@ void markMovement(sbyte gx, sbyte gy2, sbyte dist, const byte * cost)
 	{
 		if (gy2 >= 0 && gy2 < 64)
 		{
-			byte	ix = gx, iy = gy2 >> 1;
+			byte	ix = gx, iy = (byte)gy2 >> 1;
 
 			byte	gs = gridstate[iy][ix];
+
 			if (gs & (GS_HIDDEN | GS_UNIT))
 				return;
-			byte	gt = gs & GS_TERRAIN;
+			
+			byte	gt = gs & GS_TERRAIN;			
 			dist -= cost[gt];
 			if (dist < 0)
 				return;
+
+			if (gs & GS_THREATENED)
+				dist = 0;
 
 			if (gs & GS_SELECT)
 			{
@@ -689,11 +715,14 @@ void markMovement(sbyte gx, sbyte gy2, sbyte dist, const byte * cost)
 			else
 			{
 				gridstate[iy][ix] = gs | GS_SELECT;
-				gridunits[iy][ix] = dist;
+				if (dist > 0)
+				{
+					gridunits[iy][ix] = dist;
 			
-				moveNodes[moveWrite].mx = gx;
-				moveNodes[moveWrite].my2 = gy2;
-				moveWrite = (moveWrite + 1) & 63;
+					moveNodes[moveWrite].mx = gx;
+					moveNodes[moveWrite].my2 = gy2;
+					moveWrite = (moveWrite + 1) & 63;
+				}
 			}
 		}
 	}
@@ -707,14 +736,18 @@ void resetMovement(void)
 			gridstate[y][x] &= ~GS_SELECT;		
 }
 
-void calcMovement(byte unit, const byte * cost)
+void calcMovement(byte unit)
 {
+	UnitInfo	*	info = UnitInfos + (units[unit].type & UNIT_TYPE);
+
+	const byte * cost = info->speed;
+
 	sbyte ux = units[unit].mx, uy = units[unit].my;
 	sbyte uy2 = uy * 2 + (ux & 1);
 
 	moveNodes[0].mx = ux;
 	moveNodes[0].my2 = uy2;
-	gridunits[uy][ux] = 6;
+	gridunits[uy][ux] = info->range;
 
 	moveWrite = 1;
 	moveRead = 0;
@@ -737,55 +770,92 @@ void calcMovement(byte unit, const byte * cost)
 	gridunits[uy][ux] = unit;
 }
 
-void calcVisibility(void)
+void resetFlags(void)
 {
 	for(char y=0; y<32; y++)
+	{
 		for(char x=0; x<32; x++)
-			gridstate[y][x] |= GS_HIDDEN;
+		{
+			char gs = gridstate[y][x];
+			gs &= ~GS_THREATENED;
+			gs |= GS_HIDDEN;
+			gridstate[y][x] = gs;
+		}
+	}
 
+}
+
+void calcThreatened(byte team)
+{
 	for(char i=0; i<numUnits; i++)
 	{
-		sbyte ux = units[i].mx, uy2 = units[i].my * 2 + (ux & 1);
-
-		byte vmasks[6] = {0, 0, 0, 0, 0, 0};
-
-		markVisible(ux, uy2, 0);
-
-		for(byte s=1; s<6; s++)
+		if ((units[i].type & UNIT_TEAM) == team)
 		{
-			byte	m = 1;
+			sbyte ux = units[i].mx, uy2 = units[i].my * 2 + (ux & 1);
 
-			for(byte k=0; k<s; k++)
+			markThreatened(ux    , uy2 - 2);
+			markThreatened(ux + 1, uy2 - 1);
+			markThreatened(ux + 1, uy2 + 1);
+			markThreatened(ux    , uy2 + 2);
+			markThreatened(ux - 1, uy2 + 1);
+			markThreatened(ux - 1, uy2 - 1);
+		}
+	}
+}
+
+void calcVisibility(byte team)
+{
+	for(char i=0; i<numUnits; i++)
+	{
+		if ((units[i].type & UNIT_TEAM) == team)
+		{
+			UnitInfo	*	info = UnitInfos + (units[i].type & UNIT_TYPE);
+
+			sbyte ux = units[i].mx, uy2 = units[i].my * 2 + (ux & 1);
+
+			byte vmasks[6] = {0, 0, 0, 0, 0, 0};
+
+			markVisible(ux, uy2, 0);
+
+			byte	range = info->view & UNIT_INFO_RANGE;
+			byte	airborne = info->view & UNIT_INFO_AIRBORNE ? 0 : 1
+
+			for(byte s=1; s<range; s++)
 			{
-				if (!(vmasks[0] & m))
-					vmasks[0] |= markVisible(ux + k,     uy2 - 2 * s + k, m);
-				if (!(vmasks[1] & m))
-					vmasks[1] |= markVisible(ux + s,     uy2 - s + 2 * k, m);
-				if (!(vmasks[2] & m))
-					vmasks[2] |= markVisible(ux + s - k, uy2 + s + k,     m);
-				if (!(vmasks[3] & m))
-					vmasks[3] |= markVisible(ux - k,     uy2 + 2 * s - k, m);
-				if (!(vmasks[4] & m))
-					vmasks[4] |= markVisible(ux - s,     uy2 + s - 2 * k, m);
-				if (!(vmasks[5] & m))
-					vmasks[5] |= markVisible(ux - s + k, uy2 - s - k,     m);
+				byte	m = airborne;
 
-				m <<= 1;
+				for(byte k=0; k<s; k++)
+				{
+					if (!(vmasks[0] & m))
+						vmasks[0] |= markVisible(ux + k,     uy2 - 2 * s + k, m);
+					if (!(vmasks[1] & m))
+						vmasks[1] |= markVisible(ux + s,     uy2 - s + 2 * k, m);
+					if (!(vmasks[2] & m))
+						vmasks[2] |= markVisible(ux + s - k, uy2 + s + k,     m);
+					if (!(vmasks[3] & m))
+						vmasks[3] |= markVisible(ux - k,     uy2 + 2 * s - k, m);
+					if (!(vmasks[4] & m))
+						vmasks[4] |= markVisible(ux - s,     uy2 + s - 2 * k, m);
+					if (!(vmasks[5] & m))
+						vmasks[5] |= markVisible(ux - s + k, uy2 - s - k,     m);
+
+					m <<= 1;
+				}
+
+				if (vmasks[1] & 1) vmasks[0] |= m;
+				if (vmasks[2] & 1) vmasks[1] |= m;
+				if (vmasks[3] & 1) vmasks[2] |= m;
+				if (vmasks[4] & 1) vmasks[3] |= m;
+				if (vmasks[5] & 1) vmasks[4] |= m;
+				if (vmasks[0] & 1) vmasks[5] |= m;
+
+				vmasks[0] |= vmasks[0] << 1;
+				vmasks[1] |= vmasks[1] << 1;
+				vmasks[2] |= vmasks[2] << 1;
+				vmasks[3] |= vmasks[3] << 1;
+				vmasks[4] |= vmasks[4] << 1;
+				vmasks[5] |= vmasks[5] << 1;
 			}
-
-			if (vmasks[1] & 1) vmasks[0] |= m;
-			if (vmasks[2] & 1) vmasks[1] |= m;
-			if (vmasks[3] & 1) vmasks[2] |= m;
-			if (vmasks[4] & 1) vmasks[3] |= m;
-			if (vmasks[5] & 1) vmasks[4] |= m;
-			if (vmasks[0] & 1) vmasks[5] |= m;
-
-			vmasks[0] |= vmasks[0] << 1;
-			vmasks[1] |= vmasks[1] << 1;
-			vmasks[2] |= vmasks[2] << 1;
-			vmasks[3] |= vmasks[3] << 1;
-			vmasks[4] |= vmasks[4] << 1;
-			vmasks[5] |= vmasks[5] << 1;
 		}
 	}		
 }

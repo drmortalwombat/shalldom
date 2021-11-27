@@ -125,20 +125,21 @@ int main(void)
 
 	drawBaseGrid();
 
-	numUnits = 4;
+	numUnits = 16;
 	for(char i=0; i<numUnits; i++)
 	{
 		units[i].mx = rand() & 31;
 		units[i].my = rand() & 31;
-		units[i].color = rand() & 15;
-		units[i].type = rand() % 3;
+		units[i].type = rand() % 6 | ((rand() & 1) ? UNIT_TEAM : 0);
 	}
 
 	cursorX = 100;
 	cursorY = 100;
 
 	drawUnits();
-	calcVisibility();
+	resetFlags();
+	calcVisibility(UNIT_TEAM_1);
+	calcThreatened(UNIT_TEAM_2);
 
 	updateColors();
 	updateBaseGrid();
@@ -224,11 +225,8 @@ int main(void)
 				{
 					if (gridunits[gcy][gcx] != 0xff)
 					{
-						static const byte mcost[6] = 
-							{127, 4, 2, 1, 3, 10};
-
 						selectedUnit = gridunits[gcy][gcx];
-						calcMovement(selectedUnit, mcost);
+						calcMovement(selectedUnit);
 						updateBaseGrid();
 					}
 				}
@@ -236,7 +234,11 @@ int main(void)
 				{
 					resetMovement();
 					moveUnit(selectedUnit, gcx, gcy);
-					calcVisibility();
+
+					resetFlags();
+					calcVisibility(UNIT_TEAM_1);
+					calcThreatened(UNIT_TEAM_2);
+
 					updateColors();
 					updateBaseGrid();
 					selectedUnit = 0xff;
