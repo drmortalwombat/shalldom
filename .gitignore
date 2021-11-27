@@ -1,0 +1,7 @@
+
+*.asm
+*.bcs
+*.int
+*.lbl
+*.map
+*.prg
