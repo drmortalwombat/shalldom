@@ -11,8 +11,6 @@ byte viewcolor[9][16];
 
 char ox = 0, oy = 0;
 
-int cursorX, cursorY;
-
 Unit	units[32];
 byte	numUnits;
 

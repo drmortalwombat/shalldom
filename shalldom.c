@@ -9,6 +9,8 @@
 #include <c64/rasterirq.h>
 #include "perlin.h"
 #include "hexdisplay.h"
+#include "cursor.h"
+#include "gameplay.h"
 
 
 unsigned srand(unsigned * seed)
@@ -63,9 +65,13 @@ void paveRoad(char px, char py, sbyte dx, sbyte dy, byte s)
 
 RIRQCode	rirqtop, rirqbottom;
 
-byte		selectedUnit = 0xff;
-
 const char hex[] = "0123456789ABCDEF";
+
+void updateStatusLine(void)
+{
+
+}
+
 
 int main(void)
 {
@@ -113,15 +119,20 @@ int main(void)
 
 	rirq_start();
 
-	vic.spr_enable = 0x01;
-	vic.spr_expand_x = 0x01;
-	vic.spr_expand_y = 0x01;
-	vic.spr_color[0] = 1;
+	vic.spr_enable = 0x07;
+	vic.spr_expand_x = 0x06;
+	vic.spr_expand_y = 0x06;
+	vic.spr_multi = 0x01;
+	vic.spr_color[0] = VCOL_RED;
+	vic.spr_color[1] = VCOL_WHITE;
+	vic.spr_color[2] = VCOL_MED_GREY;
+	vic.spr_mcolor0 = VCOL_BLACK;
+	vic.spr_mcolor1 = VCOL_WHITE;
 
-	Screen[0x03f8] = 64 + 16;
+	Screen[0x03f8] = 64 + 18;
 
-	vic_sprxy(0, 92, 97);
-
+	Screen[0x03f9] = 64 + 16;
+	Screen[0x03fa] = 64 + 17;
 
 	drawBaseGrid();
 
@@ -133,8 +144,7 @@ int main(void)
 		units[i].type = rand() % 6 | ((rand() & 1) ? UNIT_TEAM : 0);
 	}
 
-	cursorX = 100;
-	cursorY = 100;
+	cursor_init();
 
 	drawUnits();
 	resetFlags();
@@ -144,124 +154,14 @@ int main(void)
 	updateColors();
 	updateBaseGrid();
 
+	game_init();
+
 	for(;;)
 	{
 		while (vic.ctrl1 & VIC_CTRL1_RST8) ;
 		while (!(vic.ctrl1 & VIC_CTRL1_RST8)) ;
 
-		joy_poll(1);	
-
-		int gcx = (cursorX - 8) / 24;
-		int gcy = (cursorY - 39 - 10 * (gcx & 1)) / 24;
-
-		if (joyx[1] | joyy[1])
-		{
-			cursorX += 2 * joyx[1];
-			cursorY += 2 * joyy[1];
-		}
-		else
-		{
-			int tcx = gcx * 24 + 20;
-			if (cursorX > tcx)
-				cursorX --;
-			else if (cursorX < tcx)
-				cursorX ++;
-
-			int tcy = gcy * 24 + 49 + 12 * (gcx & 1);
-			if (cursorY > tcy)
-				cursorY --;
-			else if (cursorY < tcy)
-				cursorY ++;
-		}
-
-		Screen[40 * 24 + 0] = hex[gcx >> 4];
-		Screen[40 * 24 + 1] = hex[gcx & 0x0f];
-
-		Screen[40 * 24 + 3] = hex[gcy >> 4];
-		Screen[40 * 24 + 4] = hex[gcy & 0x0f];
-
-
-		if (gcx > ox + 10)
-			scroll(1, 0);
-		else if (gcx < ox + 1)
-			scroll(-1, 0);
-
-		if (gcy > oy + 6)
-			scroll( 0, 1);
-		else if (gcy < oy + 1)
-			scroll( 0, -1);
-
-		vic_sprxy(0, cursorX - 24 * ox, cursorY - 24 * oy);
-
-		if (joyb[1])
-		{
-			gridstate[gcy][gcx] ^= GS_GHOST;
-			updateBaseGrid();
-		}
-
-		keyb_poll();
-
-		if (keyb_key)
-		{
-			switch (keyb_codes[keyb_key & 0x7f])
-			{
-			case KEY_CSR_DOWN:
-				cursorY += 24;
-				break;
-			case KEY_CSR_UP:
-				cursorY -= 24;
-				break;
-			case KEY_CSR_LEFT:
-				cursorX -= 24;
-				cursorY += 12 - 24 * (gcx & 1);
-				break;
-			case KEY_CSR_RIGHT:
-				cursorX += 24;
-				cursorY += 12 - 24 * (gcx & 1);
-				break;
-
-			case ' ':
-				if (selectedUnit == 0xff)
-				{
-					if (gridstate[gcy][gcx] & GS_UNIT)
-					{
-						selectedUnit = gridunits[gcy][gcx];
-						if ((units[selectedUnit].type & UNIT_TEAM) == UNIT_TEAM_1)
-						{
-							calcMovement(selectedUnit);
-							updateBaseGrid();
-						}
-						else
-							selectedUnit = 0xff;
-					}
-				}
-				else if (gridstate[gcy][gcx] & GS_SELECT)
-				{
-					resetMovement();
-					moveUnit(selectedUnit, gcx, gcy);
-
-					resetFlags();
-					calcVisibility(UNIT_TEAM_1);
-					calcThreatened(UNIT_TEAM_2);
-
-					updateColors();
-					updateBaseGrid();
-					selectedUnit = 0xff;
-				}
-				else
-				{
-					resetMovement();
-					updateBaseGrid();
-					selectedUnit = 0xff;
-				}
-				break;
-
-			case 'c':
-				gridstate[gcy][gcx] = 0;
-				updateBaseGrid();
-				break;
-			}
-		}
+		game_input();
 	}
 
 	return 0;

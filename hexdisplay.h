@@ -1,7 +1,7 @@
 #ifndef HEXDISPLAY_H
 #define HEXDISPLAY_H
 
-	#include <c64/types.h>
+#include <c64/types.h>
 
 #define Screen	((byte *)0xc800)
 #define Color	((byte *)0xd800)
@@ -41,8 +41,6 @@ extern byte gridunits[32][32];
 #define GTERRAIN_MOUNTAIN	5
 
 extern char ox = 0, oy = 0;
-
-extern int cursorX, cursorY;
 
 extern Unit	units[32];
 extern byte numUnits;
