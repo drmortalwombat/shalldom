@@ -30,6 +30,9 @@ void game_init(void);
 
 void game_input(void);
 
+void game_begin_phase(MovePhases phase);
+
+void game_complete_phase(void);
 
 #pragma compile("gameplay.c")
 

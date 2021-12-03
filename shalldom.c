@@ -11,7 +11,8 @@
 #include "hexdisplay.h"
 #include "cursor.h"
 #include "gameplay.h"
-
+#include "units.h"
+#include "status.h"
 
 unsigned srand(unsigned * seed)
 {
@@ -119,7 +120,7 @@ int main(void)
 
 	rirq_start();
 
-	vic.spr_enable = 0x07;
+	vic.spr_enable = 0x02;
 	vic.spr_expand_x = 0x06;
 	vic.spr_expand_y = 0x06;
 	vic.spr_multi = 0x01;
@@ -145,6 +146,7 @@ int main(void)
 	}
 
 	cursor_init();
+	status_init();
 
 	drawUnits();
 	resetFlags();
@@ -155,6 +157,7 @@ int main(void)
 	updateBaseGrid();
 
 	game_init();
+	game_begin_phase(MP_MOVE_2);
 
 	for(;;)
 	{

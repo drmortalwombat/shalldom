@@ -1,9 +1,9 @@
 #include "cursor.h"
 #include "hexdisplay.h"
+#include "status.h"
 
 int cursorX, cursorY;
 char gridX, gridY;
-
 
 void cursor_togrid(void)
 {
@@ -90,4 +90,6 @@ void cursor_move(sbyte dx, sbyte dy)
 	vic_sprxy(0, sx + 7, sy + 2);
 	vic_sprxy(1, sx, sy);
 	vic_sprxy(2, sx, sy);
+
+	status_update_pos(gridX, gridY);
 }

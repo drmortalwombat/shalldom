@@ -32,23 +32,62 @@ const char * PhaseNames[8] = {
 	"MOVING PLAYER 1"
 };
 
-byte joybcount, SelectedUnit;
+byte 	joybcount, SelectedUnit;
+bool	joyBlockMove;
 
 
 void game_init(void)
 {
 	MovePhase = MP_MOVE_2;
 	SelectedUnit = 0xff;
+
+}
+
+void game_begin_phase(MovePhases phase)
+{
+	MovePhase = phase;
+
+	for(char i=0; i<numUnits; i++)
+	{
+		units[i].tx = units[i].mx;
+		units[i].ty = units[i].my;
+		units[i].type &= ~UNIT_MOVED;
+	}
+
+	resetFlags();
+
+	byte team = MovePhaseFlags[MovePhase] & MOVPHASE_TEAM;
+
+	calcVisibility(team);
+	calcThreatened(team ^ MOVPHASE_TEAM);
+
+	updateColors();
+	updateBaseGrid();	
+}
+
+void game_complete_phase(void)
+{
+	switch (MovePhase)
+	{
+		case MP_MOVE_1:
+			game_begin_phase(MP_MOVE_2);
+			break;
+		case MP_MOVE_2:
+			game_begin_phase(MP_MOVE_1);
+			break;
+	}
 }
 
 void game_selecthex(void)
 {
+	byte team = MovePhaseFlags[MovePhase] & MOVPHASE_TEAM;
+
 	if (SelectedUnit == 0xff)
 	{
 		if (gridstate[gridY][gridX] & GS_UNIT)
 		{
 			SelectedUnit = gridunits[gridY][gridX];
-			if ((units[SelectedUnit].type & UNIT_TEAM) == UNIT_TEAM_1)
+			if ((units[SelectedUnit].type & (UNIT_TEAM | UNIT_MOVED)) == team)
 			{
 				calcMovement(SelectedUnit);
 				updateBaseGrid();
@@ -60,11 +99,8 @@ void game_selecthex(void)
 	else if (gridstate[gridY][gridX] & GS_SELECT)
 	{
 		resetMovement();
-		moveUnit(SelectedUnit, gridX, gridY);
-
-		resetFlags();
-		calcVisibility(UNIT_TEAM_1);
-		calcThreatened(UNIT_TEAM_2);
+		units[SelectedUnit].type |= UNIT_MOVED;
+		moveUnit(SelectedUnit, gridX, gridY);		
 
 		updateColors();
 		updateBaseGrid();
@@ -78,28 +114,93 @@ void game_selecthex(void)
 	}
 }
 
+void game_undohex(void)
+{
+	byte team = MovePhaseFlags[MovePhase] & MOVPHASE_TEAM;
+
+	vic.color_border++;
+	if (gridstate[gridY][gridX] & GS_UNIT)
+	{
+		char ui = gridunits[gridY][gridX];
+		if ((units[ui].type & (UNIT_TEAM | UNIT_MOVED)) == (team | UNIT_MOVED))
+		{
+			units[ui].type &= ~UNIT_MOVED;
+			moveUnit(ui, units[ui].tx, units[ui].ty);
+			updateColors();
+			updateBaseGrid();
+		}
+	}	
+}
+
+enum JoystickMenu
+{
+	JM_SELECT,
+	JM_DONE,
+	JM_UNDO,
+	JM_INFO,
+	JM_MENU
+};
+
 void game_input(void)
 {
 	joy_poll(1);
 
+	JoystickMenu menu = JM_SELECT;
+
+	if (joybcount)
+	{
+		if (joyx[1] | joyy[1])
+		{
+			if (joyx[1] < 0)
+				menu = JM_DONE;
+			else if (joyx[1] > 0)
+				menu = JM_INFO;
+			else if (joyy[1] < 0)
+				menu = JM_UNDO;
+			else
+				menu = JM_MENU;
+
+			Screen[0x03f8] = 64 + 17 + menu;
+			vic.spr_enable |= 5;
+		}
+		else
+			vic.spr_enable &= 2;
+	}
+
 	if (joyb[1])
 	{
 		joybcount++;
-		if (joyx[1] | joyy[1])
-		{
-			vic.spr_enable |= 6;
-		}
-		else
-			vic.spr_enable &= 1;
 	}
 	else if (joybcount)
 	{
+		vic.spr_enable &= 2;
 		joybcount = 0;
-		game_selecthex();
+
+		switch (menu)
+		{
+		case JM_SELECT:
+			game_selecthex();
+			break;
+		case JM_DONE:
+			joyBlockMove = true;
+			game_complete_phase();
+			break;
+		case JM_UNDO:
+			joyBlockMove = true;
+			game_undohex();
+			break;
+		case JM_INFO:
+		case JM_MENU:
+			break;
+		}
 	}
-	else
+	else if (!joyBlockMove)
 	{
 		cursor_move(4 * joyx[1], 4 * joyy[1])
+	}
+	else if (!(joyx[1] | joyy[1]))
+	{
+		joyBlockMove = false;
 	}
 
 	keyb_poll();
@@ -108,6 +209,9 @@ void game_input(void)
 	{
 		switch (keyb_codes[keyb_key & 0x7f])
 		{
+		case ' ':
+			game_selecthex();
+			break;
 		case KEY_CSR_DOWN:
 			cursor_move(0, 24);
 			break;

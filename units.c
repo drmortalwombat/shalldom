@@ -43,3 +43,6 @@ struct UnitInfo		UnitInfos[8] = {
 	}
 };
 
+Unit	units[32];
+byte	numUnits;
+

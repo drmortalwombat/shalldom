@@ -9,10 +9,17 @@ byte gridunits[32][32];
 byte viewstate[8][16];
 byte viewcolor[9][16];
 
-char ox = 0, oy = 0;
+const char * TerrainNames[6] = 
+{
+	"OCEAN",
+	"SHALLOWS",
+	"BEACH",
+	"ROAD",
+	"FORREST",
+	"MOUNTAIN"
+};
 
-Unit	units[32];
-byte	numUnits;
+char ox = 0, oy = 0;
 
 byte * hexhires[8] = {
 	(byte *)0xe000 +  0 * 960, (byte *)0xe000 +  1 * 960, (byte *)0xe000 +  2 * 960, (byte *)0xe000 + 3 * 960,
@@ -596,6 +603,8 @@ void updateBaseGrid(void)
 					{
 						byte gi = gridunits[cy + oy][cx + ox];
 						overlay(cx, cy, units[gi].type & UNIT_TYPE, units[gi].type & UNIT_TEAM ? TeamColors[1] : TeamColors[0]);
+						if (units[gi].type & UNIT_MOVED)
+							gstate |= GS_GHOST;
 					}
 
 					if (gstate & GS_GHOST)

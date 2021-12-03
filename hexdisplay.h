@@ -8,17 +8,6 @@
 #define Hires	((byte *)0xe000)
 #define Sprmem	((byte *)0xd000)
 
-struct Unit
-{
-	char	mx, my, type, pad;
-};
-
-#define UNIT_TYPE			0x1f
-#define UNIT_TEAM			0x80
-
-#define UNIT_TEAM_1			0x00
-#define UNIT_TEAM_2			0x80
-
 extern byte gridstate[32][32];
 extern byte gridunits[32][32];
 
@@ -42,8 +31,8 @@ extern byte gridunits[32][32];
 
 extern char ox = 0, oy = 0;
 
-extern Unit	units[32];
-extern byte numUnits;
+extern const char * TerrainNames[6];
+
 
 void initDisplay(void);
 

@@ -25,6 +25,23 @@ struct UnitInfo
 
 extern struct UnitInfo		UnitInfos[8];
 
+struct Unit
+{
+	char	mx, my, type, pad4;
+	char	tx, ty, pad6, pad7;
+};
+
+extern Unit	units[32];
+extern byte numUnits;
+
+
+#define UNIT_TYPE			0x1f
+#define UNIT_TEAM			0x80
+#define UNIT_MOVED			0x40
+
+#define UNIT_TEAM_1			0x00
+#define UNIT_TEAM_2			0x80
+
 
 #pragma compile("units.c")
 
