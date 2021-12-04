@@ -69,13 +69,6 @@ void cursor_move(sbyte dx, sbyte dy)
 			cursorY ++;
 	}
 
-	Screen[40 * 24 + 0] = hex[gridX >> 4];
-	Screen[40 * 24 + 1] = hex[gridX & 0x0f];
-
-	Screen[40 * 24 + 3] = hex[gridY >> 4];
-	Screen[40 * 24 + 4] = hex[gridY & 0x0f];
-
-
 	if (gridX > ox + 10)
 		scroll(1, 0);
 	else if (gridX < ox + 1)
@@ -92,4 +85,4 @@ void cursor_move(sbyte dx, sbyte dy)
 	vic_sprxy(2, sx, sy);
 
 	status_update_pos(gridX, gridY);
-}
+	}

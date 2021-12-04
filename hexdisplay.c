@@ -160,7 +160,7 @@ static const byte TerrainColor[] = {
 	VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY
 }
 
-static const byte TeamColors[] = {
+const byte TeamColors[2] = {
 	VCOL_RED, VCOL_CYAN, 
 }
 
@@ -743,7 +743,7 @@ void resetMovement(void)
 			gridstate[y][x] &= ~GS_SELECT;		
 }
 
-void calcMovement(byte unit)
+bool calcMovement(byte unit)
 {
 	UnitInfo	*	info = UnitInfos + (units[unit].type & UNIT_TYPE);
 
@@ -754,13 +754,18 @@ void calcMovement(byte unit)
 
 	moveNodes[0].mx = ux;
 	moveNodes[0].my2 = uy2;
-	gridunits[uy][ux] = info->range;
+	gridunits[uy][ux] = 48;
 
 	moveWrite = 1;
 	moveRead = 0;
 
+	bool	moving = false;
+
 	while (moveRead != moveWrite)
 	{
+		if (moveRead != 0)
+			moving = true;
+
 		sbyte gx = moveNodes[moveRead].mx;
 		sbyte gy2 = moveNodes[moveRead].my2;
 		sbyte dist = gridunits[gy2 >> 1][gx];
@@ -772,9 +777,47 @@ void calcMovement(byte unit)
 		markMovement(gx,     gy2 + 2, dist, cost);
 		markMovement(gx + 1, gy2 - 1, dist, cost);
 		markMovement(gx + 1, gy2 + 1, dist, cost);
+
 	}
 
 	gridunits[uy][ux] = unit;
+
+	return moving;
+}
+
+bool calcAttack(byte unit)
+{
+	UnitInfo	*	info = UnitInfos + (units[unit].type & UNIT_TYPE);
+
+	const byte * cost = info->speed;
+
+	sbyte ux = units[unit].mx, uy = units[unit].my;
+	sbyte uy2 = uy * 2 + (ux & 1);
+	byte	team = units[unit].type & UNIT_TEAM;
+
+	bool	attacking = false;
+
+	for(byte i=0; i<numUnits; i++)
+	{
+		byte	type = units[i].type;
+		if (team != (type & UNIT_TEAM))
+		{
+			sbyte tx = units[i].mx, ty = units[i].my;
+			sbyte ty2 = ty * 2 + (tx & 1);
+
+			sbyte	dx = ux - tx; if (dx < 0) dx = -dx;
+			sbyte	dy = uy2 - ty2; if (dy < 0) dy = -dy;
+
+			byte	dist = (byte)(dx + dy - 2) >> 1;
+			if (dist < 8 && (info->range & (1 << dist)))
+			{
+				gridstate[ty][tx] |= GS_SELECT;
+				attacking = true;
+			}
+		}
+	}
+
+	return attacking;
 }
 
 void resetFlags(void)

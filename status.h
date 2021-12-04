@@ -11,7 +11,7 @@ void status_init(void);
 
 void status_update_pos(char x, char y);
 
-void status_update_state(const char * state);
+void status_update_state(const char * state, byte color);
 
 void status_update_unit(char unit);
 

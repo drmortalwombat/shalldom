@@ -21,17 +21,6 @@ const byte MovePhaseFlags[8] = {
 	0,
 };
 
-const char * PhaseNames[8] = {
-	"ATTACK PLAYER 1",
-	"MOVE PLAYER 2",
-	"ATTACKING PLAYER 1",
-	"MOVING PLAYER 2",
-	"ATTACK PLAYER 2",
-	"MOVE PLAYER 1",
-	"ATTACKING PLAYER 2",
-	"MOVING PLAYER 1"
-};
-
 byte 	joybcount, SelectedUnit;
 bool	joyBlockMove;
 
@@ -56,13 +45,28 @@ void game_begin_phase(MovePhases phase)
 
 	resetFlags();
 
-	byte team = MovePhaseFlags[MovePhase] & MOVPHASE_TEAM;
+	byte	pflags = MovePhaseFlags[MovePhase];
+	byte 	team = pflags & MOVPHASE_TEAM;
 
 	calcVisibility(team);
 	calcThreatened(team ^ MOVPHASE_TEAM);
 
 	updateColors();
-	updateBaseGrid();	
+	updateBaseGrid();
+
+	char	color = TeamColors[team ? 1 : 0];
+
+	if (pflags & MOVPHASE_INTERACTIVE)
+	{
+		if (pflags & MOVPHASE_ATTACK)
+			status_update_state("ATTACK", color);
+		else
+			status_update_state("MOVE", color);		
+	}
+	else
+	{
+		status_update_state("EXECUTE", color);		
+	}
 }
 
 void game_complete_phase(void)
@@ -70,9 +74,15 @@ void game_complete_phase(void)
 	switch (MovePhase)
 	{
 		case MP_MOVE_1:
+			game_begin_phase(MP_ATTACK_2);
+			break;
+		case MP_ATTACK_2:
 			game_begin_phase(MP_MOVE_2);
 			break;
 		case MP_MOVE_2:
+			game_begin_phase(MP_ATTACK_1);
+			break;
+		case MP_ATTACK_1:
 			game_begin_phase(MP_MOVE_1);
 			break;
 	}
@@ -80,27 +90,42 @@ void game_complete_phase(void)
 
 void game_selecthex(void)
 {
-	byte team = MovePhaseFlags[MovePhase] & MOVPHASE_TEAM;
+	byte	pflags = MovePhaseFlags[MovePhase];
+	byte 	team = pflags & MOVPHASE_TEAM;
 
 	if (SelectedUnit == 0xff)
 	{
 		if (gridstate[gridY][gridX] & GS_UNIT)
 		{
-			SelectedUnit = gridunits[gridY][gridX];
-			if ((units[SelectedUnit].type & (UNIT_TEAM | UNIT_MOVED)) == team)
+			byte	unit = gridunits[gridY][gridX];
+			if ((units[unit].type & (UNIT_TEAM | UNIT_MOVED)) == team)
 			{
-				calcMovement(SelectedUnit);
+				if (pflags & MOVPHASE_ATTACK)
+				{
+					if (calcAttack(unit))
+						SelectedUnit = unit;
+				}
+				else
+				{
+					if (calcMovement(unit))
+						SelectedUnit = unit;
+				}
 				updateBaseGrid();
 			}
-			else
-				SelectedUnit = 0xff;
 		}
 	}
 	else if (gridstate[gridY][gridX] & GS_SELECT)
 	{
 		resetMovement();
 		units[SelectedUnit].type |= UNIT_MOVED;
-		moveUnit(SelectedUnit, gridX, gridY);		
+
+		if (pflags & MOVPHASE_ATTACK)
+		{
+			units[SelectedUnit].tx = gridX;
+			units[SelectedUnit].ty = gridY;
+		}
+		else
+			moveUnit(SelectedUnit, gridX, gridY);
 
 		updateColors();
 		updateBaseGrid();
@@ -118,18 +143,18 @@ void game_undohex(void)
 {
 	byte team = MovePhaseFlags[MovePhase] & MOVPHASE_TEAM;
 
-	vic.color_border++;
 	if (gridstate[gridY][gridX] & GS_UNIT)
 	{
 		char ui = gridunits[gridY][gridX];
 		if ((units[ui].type & (UNIT_TEAM | UNIT_MOVED)) == (team | UNIT_MOVED))
 		{
 			units[ui].type &= ~UNIT_MOVED;
-			moveUnit(ui, units[ui].tx, units[ui].ty);
+			if (pflags & MOVPHASE_ATTACK)
+				moveUnit(ui, units[ui].tx, units[ui].ty);
 			updateColors();
 			updateBaseGrid();
 		}
-	}	
+	}
 }
 
 enum JoystickMenu
@@ -227,4 +252,8 @@ void game_input(void)
 		}
 	}
 
+	if (gridstate[gridY][gridX] & GS_UNIT)
+		status_update_unit(gridunits[gridY][gridX]);
+	else
+		status_update_unit(SelectedUnit);
 }

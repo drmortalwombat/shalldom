@@ -33,6 +33,7 @@ extern char ox = 0, oy = 0;
 
 extern const char * TerrainNames[6];
 
+extern const byte TeamColors[2];
 
 void initDisplay(void);
 
@@ -52,7 +53,9 @@ void calcThreatened(byte team);
 
 void resetMovement(void);
 
-void calcMovement(byte unit);
+bool calcMovement(byte unit);
+
+bool calcAttack(byte unit);
 
 void scroll(sbyte dx, sbyte dy);
 

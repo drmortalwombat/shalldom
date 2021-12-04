@@ -66,13 +66,6 @@ void paveRoad(char px, char py, sbyte dx, sbyte dy, byte s)
 
 RIRQCode	rirqtop, rirqbottom;
 
-const char hex[] = "0123456789ABCDEF";
-
-void updateStatusLine(void)
-{
-
-}
-
 
 int main(void)
 {
@@ -143,6 +136,7 @@ int main(void)
 		units[i].mx = rand() & 31;
 		units[i].my = rand() & 31;
 		units[i].type = rand() % 6 | ((rand() & 1) ? UNIT_TEAM : 0);
+		units[i].id = rand() % 5;
 	}
 
 	cursor_init();
