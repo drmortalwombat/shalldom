@@ -15,12 +15,20 @@
 #define UNIT_INFO_RANGE		0x0f
 #define UNIT_INFO_AIRBORNE	0x80
 
+#define UNIT_INFO_DMG_AIR		0xf0
+#define UNIT_INFO_DMG_GROUND	0x0f
+#define UNIT_INFO_ARMOUR		0xf0
+#define UNIT_INFO_AGILITY		0x0f
+#define UNIT_INFO_SHOTS			0xf0
+#define UNIT_INFO_ACCURACY		0x0f
+
+
 struct UnitInfo
 {
 	byte			view, range;
 	byte			speed[8];	
 	const char *	name;
-	byte			pad[4];
+	byte			damage, armour, shots, pad;
 };
 
 extern struct UnitInfo		UnitInfos[8];

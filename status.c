@@ -52,7 +52,7 @@ void status_update_pos(char x, char y)
 	}
 }
 
-#define UNIT_COL	24
+#define UNIT_COL	22
 #define STATE_COL	14
 
 void status_update_state(const char * state, byte color)
@@ -91,19 +91,22 @@ void status_update_unit(char unit)
 			Screen[24 * 40 + UNIT_COL + 4 + i] = tp[i];
 			i++;
 		}
+		Screen[24 * 40 + UNIT_COL + 4 + i] = ' ';
+		Screen[24 * 40 + UNIT_COL + 5 + i] = '0' + units[unit].count;
+
 		while (i < 12)
 		{
-			Screen[24 * 40 + UNIT_COL + 4 + i] = ' ';
+			Screen[24 * 40 + UNIT_COL + 6 + i] = ' ';
 			i++;
 		}
 
 		char color = TeamColors[units[unit].type & UNIT_TEAM ? 1 : 0];
-		for(char i=0; i<16; i++)
+		for(char i=0; i<18; i++)
 			Color[24 * 40 + UNIT_COL + i] = color;
 	}
 	else
 	{
-		for(char i=0; i<16; i++)
+		for(char i=0; i<18; i++)
 			Screen[24 * 40 + UNIT_COL + i] = ' ';
 	}
 }

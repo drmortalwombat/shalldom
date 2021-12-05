@@ -69,8 +69,35 @@ void game_begin_phase(MovePhases phase)
 	}
 }
 
+void game_execute_battles(void)
+{
+	for(byte ui=0; ui<numUnits; ui++)
+	{
+		if (units[ui].type & UNIT_MOVED)
+		{
+			byte tx = units[ui].tx;
+			byte ty = units[ui].ty;
+
+			byte uj = gridunits[ty][tx];
+
+			Battle	b;
+			battle_init(&b, ui, uj);
+			while (battle_fire(&b))
+				;
+			battle_complete(&b);
+		}
+	}
+}
+
 void game_complete_phase(void)
 {
+	byte	pflags = MovePhaseFlags[MovePhase];
+
+	if (pflags & MOVPHASE_ATTACK)
+	{
+		game_execute_battles();
+	}
+
 	switch (MovePhase)
 	{
 		case MP_MOVE_1:
@@ -141,7 +168,8 @@ void game_selecthex(void)
 
 void game_undohex(void)
 {
-	byte team = MovePhaseFlags[MovePhase] & MOVPHASE_TEAM;
+	byte	pflags = MovePhaseFlags[MovePhase];
+	byte 	team = pflags & MOVPHASE_TEAM;
 
 	if (gridstate[gridY][gridX] & GS_UNIT)
 	{

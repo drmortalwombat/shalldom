@@ -35,7 +35,7 @@ void buildterrain(unsigned seed)
 	{
 		for(byte ix=0; ix<32; ix++)
 		{
-			int f = mnoise2(ix * 32, (2 * iy + (ix & 1)) * 16, 3, 153);
+			int f = mnoise2(ix * 32, (2 * iy + (ix & 1)) * 16, 3, 120);
 
 			if (f < -5000)
 				gridstate[iy][ix] = GTERRAIN_SEA;
@@ -137,6 +137,7 @@ int main(void)
 		units[i].my = rand() & 31;
 		units[i].type = rand() % 6 | ((rand() & 1) ? UNIT_TEAM : 0);
 		units[i].id = rand() % 5;
+		units[i].count = 5;
 	}
 
 	cursor_init();

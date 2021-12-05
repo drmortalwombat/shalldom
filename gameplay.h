@@ -2,6 +2,7 @@
 #define GAMEPLAY_H
 
 #include <c64/types.h>
+#include "battle.h"
 
 enum MovePhases
 {
