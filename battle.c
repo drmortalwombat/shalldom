@@ -1,9 +1,12 @@
 #include "battle.h"
+#include "window.h"
 
 void battle_init(Battle * b, byte aunit, byte dunit)
-{
+{	
 	b->units[0] = aunit;
 	b->units[1] = dunit;
+
+	byte	dist = unit_distance(aunit, dunit);
 
 	byte	si = 0;
 
@@ -11,8 +14,25 @@ void battle_init(Battle * b, byte aunit, byte dunit)
 	{
 		Unit		*	u = units + b->units[t];
 		UnitInfo	*	ui = UnitInfos + (u->type & UNIT_TYPE);
+
+		Unit		*	eu = units + b->units[1 - t];
+		UnitInfo	*	eui = UnitInfos + (eu->type & UNIT_TYPE);
+
 		byte			nu = u->count, ns = ui->shots >> 4;
-		byte			health = ui->armour >> 4;
+		byte			health = (ui->armour & UNIT_INFO_ARMOUR) >> 2;
+
+		if (ui->range & (1 << dist))
+		{
+			if (eui->range & UNIT_INFO_AIRBORNE)
+				b->damage[t] = ui->damage >> 4;
+			else
+				b->damage[t] = ui->damage & UNIT_INFO_DMG_GROUND;
+		}
+		else
+			b->damage[t] = 0;
+
+		if (b->damage[t] == 0)
+			ns = 0;
 
 		for(byte i=0; i<nu; i++)
 		{
@@ -21,6 +41,7 @@ void battle_init(Battle * b, byte aunit, byte dunit)
 			for(byte j=0; j<ns; j++)
 				b->shots[si++] = sh;
 		}
+
 		for(byte i=nu; i<5; i++)
 			b->health[t][i] = 0;
 	}
@@ -28,6 +49,12 @@ void battle_init(Battle * b, byte aunit, byte dunit)
 	b->numShots = si;
 	b->firedShots = 0;
 	b->hitShots = 0;
+
+	for(byte i=0; i<si; i++)
+	{
+		byte j = rand() % si;
+		byte t = b->shots[j]; b->shots[j] = b->shots[i]; b->shots[i] = t;
+	}
 }
 
 bool battle_fire(Battle * b)
@@ -67,6 +94,11 @@ bool battle_fire(Battle * b)
 				byte	to = (b->shots[f] & BATTLE_SHOT_DST) >> 4;
 				byte	ti = (b->shots[f] & BATTLE_SHOT_COMBATAND) ? 0 : 1;
 
+				char buffer[30];
+				sprintf(buffer, "HIT %d, %d : %d %d", to, ti, b->health[ti][to], b->damage[1 - ti]);
+				window_write(0, 14, buffer);
+				window_scroll();				
+
 				if (b->health[ti][to] > b->damage[1 - ti])
 					b->health[ti][to] -= b->damage[1 - ti];
 				else
@@ -77,6 +109,21 @@ bool battle_fire(Battle * b)
 			b->hitShots = f;
 		}
 	}
+
+	if (b->hitShots == b->numShots)
+	{
+		for(char i=0; i<2; i++)
+		{
+			for(char j=0; j<5; j++)
+			{
+				char buffer[30];
+				sprintf(buffer, "%d, %d : %d", i, j, b->health[i][j]);
+				window_write(0, 14, buffer);
+				window_scroll();				
+			}
+		}
+	}
+
 
 	return b->hitShots != b->numShots;
 }

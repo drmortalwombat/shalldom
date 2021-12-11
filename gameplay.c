@@ -6,6 +6,7 @@
 #include "cursor.h"
 #include "hexdisplay.h"
 #include "units.h"
+#include "window.h"
 
 MovePhases MovePhase;
 
@@ -80,6 +81,7 @@ void game_execute_battles(void)
 
 			byte uj = gridunits[ty][tx];
 
+			window_open(4, 4, 20, 15);			
 			Battle	b;
 			battle_init(&b, ui, uj);
 			while (battle_fire(&b))
@@ -276,6 +278,19 @@ void game_input(void)
 			break;
 		case KEY_CSR_RIGHT:
 			cursor_move( 24, 12 - 24 * (gridX & 1));
+			break;
+
+		case 'z':
+			game_complete_phase();
+			break;
+
+		case 'w':
+			window_open(4, 4, 13, 8);
+			window_write(0, 0, "HELLO WORLD");
+			window_write(0, 1, "2ND LINE");
+			break;
+		case 'e':
+			window_close();
 			break;
 		}
 	}

@@ -14,6 +14,8 @@
 #include "units.h"
 #include "status.h"
 
+#pragma region(main, 0x0a00, 0xc800, , , {code, data, bss, heap, stack} )
+
 unsigned srand(unsigned * seed)
 {
 	unsigned s = *seed;
@@ -69,6 +71,10 @@ RIRQCode	rirqtop, rirqbottom;
 
 int main(void)
 {
+	// Turn basic ROM off
+	
+	*(char *)0x01 = 0x36;
+
 	buildterrain(23142);
 
 	paveRoad( 4,  4,   1,  1, 10);

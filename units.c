@@ -54,3 +54,17 @@ struct UnitInfo		UnitInfos[8] = {
 Unit	units[32];
 byte	numUnits;
 
+
+byte unit_distance(byte ua, byte ub)
+{
+	sbyte 	ux = units[ua].mx, uy = units[ua].my;
+	sbyte 	uy2 = uy * 2 + (ux & 1);
+	
+	sbyte 	tx = units[ub].mx, ty = units[ub].my;
+	sbyte 	ty2 = ty * 2 + (tx & 1);
+
+	sbyte	dx = ux - tx; if (dx < 0) dx = -dx;
+	sbyte	dy = uy2 - ty2; if (dy < 0) dy = -dy;
+
+	return (byte)(dx + dy - 2) >> 1;
+}

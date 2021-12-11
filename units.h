@@ -3,7 +3,7 @@
 
 #include <c64/types.h>
 
-#define UNIT_INFANTRRY		0
+#define UNIT_INFANTRY		0
 #define UNIT_LIGHT_TANK		1
 #define UNIT_CHOPPER		2
 #define UNIT_HEAVY_TANK		3
@@ -52,6 +52,7 @@ extern byte numUnits;
 #define UNIT_TEAM_1			0x00
 #define UNIT_TEAM_2			0x80
 
+byte unit_distance(byte ua, byte ub);
 
 #pragma compile("units.c")
 
