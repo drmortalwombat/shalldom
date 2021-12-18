@@ -55,6 +55,19 @@ void battle_init(Battle * b, byte aunit, byte dunit)
 		byte j = rand() % si;
 		byte t = b->shots[j]; b->shots[j] = b->shots[i]; b->shots[i] = t;
 	}
+
+	for(byte t=0; t<2; t++)
+	{
+		Unit		*	u = units + b->units[t];
+		const char	*	sp = hex_sprite_data(u->type & UNIT_TYPE);
+
+		byte	y = 0;
+		for(byte i=0; i<u->count; i++)
+		{
+			window_put_sprite(4 + 6 * t, y, sp)
+			y += 24;
+		}
+	}
 }
 
 bool battle_fire(Battle * b)
@@ -94,11 +107,6 @@ bool battle_fire(Battle * b)
 				byte	to = (b->shots[f] & BATTLE_SHOT_DST) >> 4;
 				byte	ti = (b->shots[f] & BATTLE_SHOT_COMBATAND) ? 0 : 1;
 
-				char buffer[30];
-				sprintf(buffer, "HIT %d, %d : %d %d", to, ti, b->health[ti][to], b->damage[1 - ti]);
-				window_write(0, 14, buffer);
-				window_scroll();				
-
 				if (b->health[ti][to] > b->damage[1 - ti])
 					b->health[ti][to] -= b->damage[1 - ti];
 				else
@@ -123,7 +131,6 @@ bool battle_fire(Battle * b)
 			}
 		}
 	}
-
 
 	return b->hitShots != b->numShots;
 }

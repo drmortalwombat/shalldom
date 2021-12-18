@@ -38,6 +38,11 @@ const byte sprites[] = {
 
 };
 
+const char * hex_sprite_data(byte sp)
+{
+	return sprites + 64 * sp;
+}
+
 // 6 x 3 cells for two grid items
 //     __
 // \  /
