@@ -68,6 +68,7 @@ void paveRoad(char px, char py, sbyte dx, sbyte dy, byte s)
 
 RIRQCode	rirqtop, rirqbottom;
 
+#pragma align(rirqbottom, 16)
 
 int main(void)
 {

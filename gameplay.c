@@ -83,6 +83,7 @@ void game_execute_battles(void)
 
 			window_open(4, 4, 20, 15);			
 			Battle	b;
+			memset(&b, 0xff, sizeof(b));
 			battle_init(&b, ui, uj);
 			while (battle_fire(&b))
 				;

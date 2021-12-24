@@ -9,6 +9,8 @@ void window_close(void);
 
 void window_fill(char pat);
 
+void window_color_rect(char x, char y, char w, char h, char color);
+
 void window_scroll(void);
 
 void window_write(char x, char y, const char * text);

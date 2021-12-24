@@ -22,6 +22,19 @@ void window_fill(char pat)
 	}
 }
 
+
+void window_color_rect(char x, char y, char w, char h, char color)
+{
+	char	*	cp = Screen + 40 * (winY + y) + (winX + x);
+
+	for(char i=0; i<h; i++)
+	{
+		for(char j=0; j<w; j++)
+			cp[j] = color;
+		cp += 40;
+	}
+}
+
 void window_scroll(void)
 {
 	char	*	wp = Hires + 320 * winY + 8 * winX;
@@ -67,7 +80,20 @@ void window_put_sprite(char x, char y, const char * sprite)
 
 	for(char iy=0; iy<21; iy++)
 	{
-		wp[0] = sprite[0]; wp[8] = sprite[1]; wp[16] = sprite[2];
+		char d, m;
+
+		d = sprite[0];
+		m = ((d & 0xaa) >> 1) | ((d & 0x55) << 1) | d;
+		wp[0] = (wp[0] & ~m) | (d ^ ((~d & 0xaa) >> 1));
+
+		d = sprite[1];
+		m = ((d & 0xaa) >> 1) | ((d & 0x55) << 1) | d;
+		wp[8] = (wp[8] & ~m) | (d ^ ((~d & 0xaa) >> 1));
+
+		d = sprite[2];
+		m = ((d & 0xaa) >> 1) | ((d & 0x55) << 1) | d;
+		wp[16] = (wp[16] & ~m) | (d ^ ((~d & 0xaa) >> 1));
+
 		sprite += 3;
 		wp++;
 		ry++;

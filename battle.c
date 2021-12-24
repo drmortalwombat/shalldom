@@ -56,6 +56,9 @@ void battle_init(Battle * b, byte aunit, byte dunit)
 		byte t = b->shots[j]; b->shots[j] = b->shots[i]; b->shots[i] = t;
 	}
 
+	window_fill(0x55);
+	window_color_rect(0, 0, 5, 10, 0xc2);
+	window_color_rect(5, 0, 5, 10, 0xa3);
 	for(byte t=0; t<2; t++)
 	{
 		Unit		*	u = units + b->units[t];
@@ -118,6 +121,7 @@ bool battle_fire(Battle * b)
 		}
 	}
 
+#if 0
 	if (b->hitShots == b->numShots)
 	{
 		for(char i=0; i<2; i++)
@@ -131,6 +135,7 @@ bool battle_fire(Battle * b)
 			}
 		}
 	}
+#endif
 
 	return b->hitShots != b->numShots;
 }
