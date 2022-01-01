@@ -1,5 +1,7 @@
 #include "battle.h"
 #include "window.h"
+#include <c64/sprites.h>
+#include "hexdisplay.h"
 
 void battle_init(Battle * b, byte aunit, byte dunit)
 {	
@@ -57,20 +59,28 @@ void battle_init(Battle * b, byte aunit, byte dunit)
 	}
 
 	window_fill(0x55);
-	window_color_rect(0, 0, 5, 10, 0xc2);
-	window_color_rect(5, 0, 5, 10, 0xa3);
+
 	for(byte t=0; t<2; t++)
 	{
 		Unit		*	u = units + b->units[t];
+
+		char	ca = TeamColors[(u->type & UNIT_TEAM) ? 1 : 0] | (TerrainColor[gridstate[u->my][u->mx] & GS_TERRAIN] << 4);
+
+		window_color_rect( 6 * t, 0, 6, 15, ca);
+
 		const char	*	sp = hex_sprite_data(u->type & UNIT_TYPE);
 
 		byte	y = 0;
 		for(byte i=0; i<u->count; i++)
 		{
-			window_put_sprite(4 + 6 * t, y, sp)
+			window_put_sprite(2 + 6 * t, y, sp)
 			y += 24;
 		}
 	}
+
+	for(char i=0; i<8; i++)
+		spr_set(i, false, 0, 0, 64 + 22, 7, true, false, false);
+
 }
 
 bool battle_fire(Battle * b)
@@ -113,7 +123,10 @@ bool battle_fire(Battle * b)
 				if (b->health[ti][to] > b->damage[1 - ti])
 					b->health[ti][to] -= b->damage[1 - ti];
 				else
+				{
 					b->health[ti][to] = 0;
+					window_clear_sprite(2 + 6 * ti, 24 * to, 0x55)
+				}
 			}	
 
 			f++;
@@ -139,6 +152,42 @@ bool battle_fire(Battle * b)
 
 	return b->hitShots != b->numShots;
 }
+
+bool battle_fire_animate(Battle * b, char phase)
+{
+	vic.color_border++;
+	char si = 0;
+	char step = b->firedShots;
+	if (step == b->numShots)
+		step = b->hitShots + 8;
+
+	for(char fi=b->hitShots; fi<b->firedShots; fi++)
+	{
+		if (b->shots[fi] & BATTLE_SHOT_FIRED)
+		{
+			byte	from = b->shots[fi] & BATTLE_SHOT_SRC;
+			byte	fc = (b->shots[fi] & BATTLE_SHOT_COMBATAND) ? 1 : 0;
+			byte	to = (b->shots[fi] & BATTLE_SHOT_DST) >> 4;
+			byte	tc = (b->shots[fi] & BATTLE_SHOT_COMBATAND) ? 0 : 1;
+
+			byte	pi = (step - fi - 1) * 8 + phase;
+
+			int fy = 60 + (winY + 3 * from) * 8, ty = 60 + (winY + 3 * to) * 8;
+			int fx = 32 + (winX + 2 + 6 * fc) * 8, tx = 32 + (winX + 2 + 6 * tc) * 8;
+
+			spr_show(si, true);
+			spr_move(si, fx + ((tx - fx) * pi >> 6), fy + ((ty - fy) * pi >> 6));
+			si++;
+		}
+	}
+	while (si < 8)
+	{
+		spr_show(si, false);
+		si++;
+	}	
+	vic.color_border--;
+}
+
 
 void battle_complete(Battle * b)
 {

@@ -1,5 +1,6 @@
 #include "hexdisplay.h"
 #include <c64/vic.h>
+#include <c64/sprites.h>
 
 #include "units.h"
 
@@ -160,7 +161,7 @@ const byte gmask1[16][8] =
 	{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 };
 
-static const byte TerrainColor[] = {
+const byte TerrainColor[16] = {
 	VCOL_BLUE, VCOL_LT_BLUE, VCOL_YELLOW, VCOL_MED_GREY, VCOL_GREEN, VCOL_LT_GREY, 0, 0,
 	VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY
 }
@@ -923,6 +924,8 @@ void initDisplay(void)
 	memcpy(Sprmem + 2048, Sprmem + 2048, 2048);
 
 	*(byte *)0x01 = 0x35;
+
+	spr_init(Screen);
 
 	vic.color_border = BORDER_COLOR;
 

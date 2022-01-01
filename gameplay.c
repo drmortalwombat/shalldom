@@ -81,15 +81,24 @@ void game_execute_battles(void)
 
 			byte uj = gridunits[ty][tx];
 
-			window_open(4, 4, 20, 15);			
+			window_open(4, 4, 12, 15);			
 			Battle	b;
 			memset(&b, 0xff, sizeof(b));
 			battle_init(&b, ui, uj);
 			while (battle_fire(&b))
-				;
+			{
+				for(char phase=0; phase<8; phase++)
+				{
+					battle_fire_animate(&b, phase);
+					vic_waitFrame();
+				}
+			}
 			battle_complete(&b);
+			window_close();
 		}
 	}
+
+	cursor_show();
 }
 
 void game_complete_phase(void)
@@ -216,11 +225,15 @@ void game_input(void)
 			else
 				menu = JM_MENU;
 
-			Screen[0x03f8] = 64 + 17 + menu;
-			vic.spr_enable |= 5;
+			spr_image(0, 64 + 17 + menu);
+			spr_show(0, true);
+			spr_show(2, true);
 		}
 		else
-			vic.spr_enable &= 2;
+		{
+			spr_show(0, false);
+			spr_show(2, false);
+		}
 	}
 
 	if (joyb[1])
@@ -229,7 +242,9 @@ void game_input(void)
 	}
 	else if (joybcount)
 	{
-		vic.spr_enable &= 2;
+		spr_show(0, false);
+		spr_show(2, false);
+
 		joybcount = 0;
 
 		switch (menu)

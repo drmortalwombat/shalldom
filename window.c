@@ -105,6 +105,28 @@ void window_put_sprite(char x, char y, const char * sprite)
 	}
 }
 
+void window_clear_sprite(char x, char y, char fill)
+{
+	char	*	wp = Hires + 320 * (winY + (y >> 3)) + 8 * (winX + x) + (y & 7);
+
+	char	ry = y & 7;
+
+	for(char iy=0; iy<21; iy++)
+	{
+		wp[0] = fill;
+		wp[8] = fill;
+		wp[16] = fill;
+
+		wp++;
+		ry++;
+		if (ry == 8)
+		{
+			wp += 312;
+			ry = 0;
+		}
+	}	
+}
+
 void window_open(char x, char y, char w, char h)
 {
 	winX = x;

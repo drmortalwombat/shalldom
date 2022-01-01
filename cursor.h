@@ -12,6 +12,8 @@ void cursor_init(void);
 
 void cursor_move(sbyte dx, sbyte dy);
 
+void cursor_show(void);
+
 #pragma compile("cursor.c")
 
 #endif

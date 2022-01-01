@@ -35,6 +35,10 @@ extern const char * TerrainNames[6];
 
 extern const byte TeamColors[2];
 
+extern const byte TerrainColor[16];
+
+const char * hex_sprite_data(byte sp);
+
 void initDisplay(void);
 
 void overlay(byte cx, byte cy, byte si, byte c);

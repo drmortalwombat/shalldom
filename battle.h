@@ -19,9 +19,11 @@ struct Battle
 
 void battle_init(Battle * b, byte aunit, byte dunit);
 
-void battle_round(Battle * b);
-
 void battle_complete(Battle * b);
+
+bool battle_fire(Battle * b);
+
+bool battle_fire_animate(Battle * b, char phase);
 
 #pragma compile("battle.c")
 
