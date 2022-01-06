@@ -6,11 +6,12 @@ const byte colorfont[] = {
 
 };
 
-char	winX, winY, winW, winH;
+char		winX, winY, winW, winH;
+char	*	winP;
 
 void window_fill(char pat)
 {
-	char	*	wp = Hires + 320 * winY + 8 * winX;
+	char	*	wp = winP;
 	char		w = 8 * winW;
 	
 	for(char y=0; y<winH; y++)
@@ -37,7 +38,7 @@ void window_color_rect(char x, char y, char w, char h, char color)
 
 void window_scroll(void)
 {
-	char	*	wp = Hires + 320 * winY + 8 * winX;
+	char	*	wp = winP;
 	char		w = 8 * winW;
 	
 	for(char y=1; y<winH; y++)
@@ -54,7 +55,7 @@ void window_scroll(void)
 
 void window_write(char x, char y, const char * text)
 {
-	char	*	wp = Hires + 320 * (winY + y) + 8 * (winX + x);
+	char	*	wp = winP + 8 * (40 * y + x);
 
 
 	char 	i = 0;
@@ -74,9 +75,7 @@ void window_write(char x, char y, const char * text)
 
 void window_put_sprite(char x, char y, const char * sprite)
 {
-	char	*	wp = Hires + 320 * (winY + (y >> 3)) + 8 * (winX + x) + (y & 7);
-
-	char	ry = y & 7;
+	char	*	wp = winP + (8 * (40 * (y >> 3) + x) | (y & 7));
 
 	for(char iy=0; iy<21; iy++)
 	{
@@ -96,20 +95,14 @@ void window_put_sprite(char x, char y, const char * sprite)
 
 		sprite += 3;
 		wp++;
-		ry++;
-		if (ry == 8)
-		{
+		if (!((unsigned)wp & 7))
 			wp += 312;
-			ry = 0;
-		}
 	}
 }
 
 void window_clear_sprite(char x, char y, char fill)
 {
-	char	*	wp = Hires + 320 * (winY + (y >> 3)) + 8 * (winX + x) + (y & 7);
-
-	char	ry = y & 7;
+	char	*	wp = winP + (8 * (40 * (y >> 3) + x) | (y & 7));
 
 	for(char iy=0; iy<21; iy++)
 	{
@@ -118,12 +111,8 @@ void window_clear_sprite(char x, char y, char fill)
 		wp[16] = fill;
 
 		wp++;
-		ry++;
-		if (ry == 8)
-		{
+		if (!((unsigned)wp & 7))
 			wp += 312;
-			ry = 0;
-		}
 	}	
 }
 
@@ -134,7 +123,9 @@ void window_open(char x, char y, char w, char h)
 	winW = w;
 	winH = h;
 
-	char	*	wp = Hires + 320 * (winY - 1) + 8 * (winX - 1);
+	winP = Hires + 320 * winY + 8 * winX;
+
+	char	*	wp = winP - 328;
 
 	char	*	tp = wp;
 	tp[4] |= 0x0f;
@@ -216,8 +207,8 @@ void window_open(char x, char y, char w, char h)
 
 void window_close(void)
 {
-	drawBaseGrid();
 	updateColors();
+	drawBaseGrid();
 	updateBaseGrid();
 }
 

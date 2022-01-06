@@ -3,15 +3,51 @@
 #include <c64/sprites.h>
 #include "hexdisplay.h"
 
-void battle_init(Battle * b, byte aunit, byte dunit)
-{	
-	b->units[0] = aunit;
-	b->units[1] = dunit;
 
-	byte	dist = unit_distance(aunit, dunit);
+BattlePair	BattlePairs[32];
+byte		NumBattlePairs;
+
+
+
+void battle_add_pair(byte from, byte to)
+{
+	BattlePairs[NumBattlePairs].from = from;
+	BattlePairs[NumBattlePairs].to = to;
+	NumBattlePairs++;
+}
+
+void battle_cancel_pair(byte from)
+{
+	byte	i;
+	while (i < NumBattlePairs && BattlePairs[i].from != from)
+		i++;
+	while (i + 1 < NumBattlePairs)
+	{
+		BattlePairs[i] = BattlePairs[i + 1];
+		i++;
+	}
+	NumBattlePairs = i;
+}
+
+
+void battle_init_health(Battle * b, byte t)
+{
+	Unit		*	u = units + b->units[t];
+	UnitInfo	*	ui = UnitInfos + (u->type & UNIT_TYPE);
+	byte			nu = u->count;
+	byte			health = (ui->armour & UNIT_INFO_ARMOUR) >> 2;
+
+	for(byte i=0; i<nu; i++)
+		b->health[t][i] = health;
+	for(byte i=nu; i<5; i++)
+		b->health[t][i] = 0;
+}
+
+void battle_init_shots(Battle * b)
+{
+	byte	dist = unit_distance(b->units[0], b->units[1]);
 
 	byte	si = 0;
-
 	for(byte t=0; t<2; t++)
 	{
 		Unit		*	u = units + b->units[t];
@@ -20,12 +56,14 @@ void battle_init(Battle * b, byte aunit, byte dunit)
 		Unit		*	eu = units + b->units[1 - t];
 		UnitInfo	*	eui = UnitInfos + (eu->type & UNIT_TYPE);
 
-		byte			nu = u->count, ns = ui->shots >> 4;
-		byte			health = (ui->armour & UNIT_INFO_ARMOUR) >> 2;
+		byte			ns = ui->shots >> 4;
 
-		if (ui->range & (1 << dist))
+		byte			maxr = ui->range & UNIT_INFO_SHOT_RANGE;
+		byte			minr = ui->range & UNIT_INFO_SHOT_MIN ? 1 : 0;
+
+		if (dist >= minr && dist < maxr)
 		{
-			if (eui->range & UNIT_INFO_AIRBORNE)
+			if (eui->view & UNIT_INFO_AIRBORNE)
 				b->damage[t] = ui->damage >> 4;
 			else
 				b->damage[t] = ui->damage & UNIT_INFO_DMG_GROUND;
@@ -36,27 +74,43 @@ void battle_init(Battle * b, byte aunit, byte dunit)
 		if (b->damage[t] == 0)
 			ns = 0;
 
-		for(byte i=0; i<nu; i++)
+		for(byte i=0; i<5; i++)
 		{
-			b->health[t][i] = health;
-			byte	sh = i | (u->type & UNIT_TEAM) | (t ? BATTLE_SHOT_COMBATAND : 0);
-			for(byte j=0; j<ns; j++)
-				b->shots[si++] = sh;
+			if (b->health[t][i] > 0)
+			{
+				byte	sh = i | (u->type & UNIT_TEAM) | (t ? BATTLE_SHOT_COMBATAND : 0);
+				for(byte j=0; j<ns; j++)
+					b->shots[si++] = sh;
+			}
 		}
-
-		for(byte i=nu; i<5; i++)
-			b->health[t][i] = 0;
 	}
 
 	b->numShots = si;
 	b->firedShots = 0;
-	b->hitShots = 0;
 
+	// Randomize fire order
 	for(byte i=0; i<si; i++)
 	{
 		byte j = rand() % si;
 		byte t = b->shots[j]; b->shots[j] = b->shots[i]; b->shots[i] = t;
 	}
+
+}
+
+void battle_init(Battle * b, byte dunit)
+{	
+	b->units[1] = dunit;
+
+	battle_init_health(b, 1);
+}
+
+void battle_begin_attack(Battle * b, byte aunit)
+{
+	b->units[0] = aunit;
+
+	battle_init_health(b, 0);
+
+	battle_init_shots(b);
 
 	window_fill(0x55);
 
@@ -71,9 +125,10 @@ void battle_init(Battle * b, byte aunit, byte dunit)
 		const char	*	sp = hex_sprite_data(u->type & UNIT_TYPE);
 
 		byte	y = 0;
-		for(byte i=0; i<u->count; i++)
+		for(byte i=0; i<5; i++)
 		{
-			window_put_sprite(2 + 6 * t, y, sp)
+			if (b->health[t][i])
+				window_put_sprite(2 + 6 * t, y, sp)
 			y += 24;
 		}
 	}
@@ -106,13 +161,11 @@ bool battle_fire(Battle * b)
 		}
 		else
 			b->shots[f] = 0;
-		f++;
-		b->firedShots = f;
 	}
 
-	if (f > 8 || f == b->numShots)
+	if (f >= 8)
 	{
-		f = b->hitShots;
+		f = b->firedShots - 8;
 		if (f < b->numShots)
 		{
 			if (b->shots[f] & BATTLE_SHOT_FIRED)
@@ -128,29 +181,12 @@ bool battle_fire(Battle * b)
 					window_clear_sprite(2 + 6 * ti, 24 * to, 0x55)
 				}
 			}	
-
-			f++;
-			b->hitShots = f;
 		}
 	}
 
-#if 0
-	if (b->hitShots == b->numShots)
-	{
-		for(char i=0; i<2; i++)
-		{
-			for(char j=0; j<5; j++)
-			{
-				char buffer[30];
-				sprintf(buffer, "%d, %d : %d", i, j, b->health[i][j]);
-				window_write(0, 14, buffer);
-				window_scroll();				
-			}
-		}
-	}
-#endif
+	b->firedShots++;
 
-	return b->hitShots != b->numShots;
+	return b->firedShots < b->numShots + 8;
 }
 
 bool battle_fire_animate(Battle * b, char phase)
@@ -158,10 +194,13 @@ bool battle_fire_animate(Battle * b, char phase)
 	vic.color_border++;
 	char si = 0;
 	char step = b->firedShots;
-	if (step == b->numShots)
-		step = b->hitShots + 8;
+	char from = 0, to = step;
+	if (step > 8)
+		from = step - 8;
+	if (to > b->numShots)
+		to = b->numShots;
 
-	for(char fi=b->hitShots; fi<b->firedShots; fi++)
+	for(char fi=from; fi<to; fi++)
 	{
 		if (b->shots[fi] & BATTLE_SHOT_FIRED)
 		{
@@ -170,13 +209,13 @@ bool battle_fire_animate(Battle * b, char phase)
 			byte	to = (b->shots[fi] & BATTLE_SHOT_DST) >> 4;
 			byte	tc = (b->shots[fi] & BATTLE_SHOT_COMBATAND) ? 0 : 1;
 
-			byte	pi = (step - fi - 1) * 8 + phase;
+			byte	pi = (step - fi - 1) * 4 + phase;
 
 			int fy = 60 + (winY + 3 * from) * 8, ty = 60 + (winY + 3 * to) * 8;
 			int fx = 32 + (winX + 2 + 6 * fc) * 8, tx = 32 + (winX + 2 + 6 * tc) * 8;
 
 			spr_show(si, true);
-			spr_move(si, fx + ((tx - fx) * pi >> 6), fy + ((ty - fy) * pi >> 6));
+			spr_move(si, fx + ((tx - fx) * pi >> 5), fy + ((ty - fy) * pi >> 5));
 			si++;
 		}
 	}
@@ -188,17 +227,25 @@ bool battle_fire_animate(Battle * b, char phase)
 	vic.color_border--;
 }
 
+void battle_return_units(Battle * b, byte t)
+{
+	Unit		*	u = units + b->units[t];
+	byte			nu = 0;
+
+	for(byte i=0; i<5; i++)
+		if (b->health[t][i] > 0)
+			nu++;
+	u->count = nu;	
+}
+
+void battle_complete_attack(Battle * b)
+{
+	battle_return_units(b, 0);
+}
+
 
 void battle_complete(Battle * b)
 {
-	for(byte t=0; t<2; t++)
-	{
-		Unit		*	u = units + b->units[t];
-		byte			nu = 0;
-
-		for(byte i=0; i<5; i++)
-			if (b->health[t][i] > 0)
-				nu++;
-		u->count = nu;
-	}
+	battle_return_units(b, 1);
 }
+

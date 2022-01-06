@@ -3,13 +3,14 @@
 
 #include "units.h"
 
+// Slot 0 is attacker, slot 1 is defender
 struct Battle
 {
 	byte	units[2];
 	byte	damage[2];
 	byte	health[2][5];
 	byte	shots[64];
-	byte	numShots, firedShots, hitShots;
+	byte	numShots, firedShots;
 };
 
 #define BATTLE_SHOT_SRC			0x07
@@ -17,9 +18,34 @@ struct Battle
 #define BATTLE_SHOT_DST			0x70
 #define BATTLE_SHOT_FIRED		0x80
 
-void battle_init(Battle * b, byte aunit, byte dunit);
+struct BattlePair
+{
+	byte	from, to;
+};
 
+extern BattlePair	BattlePairs[32];
+extern byte			NumBattlePairs;
+
+
+
+void battle_add_pair(byte from, byte to);
+
+void battle_cancel_pair(byte from);
+
+
+
+// Add defender to battle
+void battle_init(Battle * b, byte dunit);
+
+// Add attacker to battle
+void battle_begin_attack(Battle * b, byte aunit);
+
+// Complete battle with attacker
+void battle_complete_attack(Battle * b);
+
+// Complete battle for defender
 void battle_complete(Battle * b);
+
 
 bool battle_fire(Battle * b);
 

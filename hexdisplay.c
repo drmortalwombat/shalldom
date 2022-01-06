@@ -417,6 +417,13 @@ void moveUnit(byte unit, byte x, byte y)
 }
 
 
+void hideUnit(byte unit)
+{
+	char px = units[unit].mx, py = units[unit].my;
+	gridstate[py][px] &= ~GS_UNIT;
+	gridunits[py][px] = 0xff;
+}
+
 void scroll(sbyte dx, sbyte dy)
 {
 	sbyte tx = ox + 2 * dx; 
@@ -609,7 +616,7 @@ void updateBaseGrid(void)
 					{
 						byte gi = gridunits[cy + oy][cx + ox];
 						overlay(cx, cy, units[gi].type & UNIT_TYPE, units[gi].type & UNIT_TEAM ? TeamColors[1] : TeamColors[0]);
-						if (units[gi].type & UNIT_MOVED)
+						if (units[gi].type & UNIT_COMMANDED)
 							gstate |= GS_GHOST;
 					}
 
@@ -801,6 +808,9 @@ bool calcAttack(byte unit)
 	sbyte uy2 = uy * 2 + (ux & 1);
 	byte	team = units[unit].type & UNIT_TEAM;
 
+	byte			maxr = info->range & UNIT_INFO_SHOT_RANGE;
+	byte			minr = info->range & UNIT_INFO_SHOT_MIN ? 1 : 0;
+
 	bool	attacking = false;
 
 	for(byte i=0; i<numUnits; i++)
@@ -809,16 +819,19 @@ bool calcAttack(byte unit)
 		if (team != (type & UNIT_TEAM))
 		{
 			sbyte tx = units[i].mx, ty = units[i].my;
-			sbyte ty2 = ty * 2 + (tx & 1);
-
-			sbyte	dx = ux - tx; if (dx < 0) dx = -dx;
-			sbyte	dy = uy2 - ty2; if (dy < 0) dy = -dy;
-
-			byte	dist = (byte)(dx + dy - 2) >> 1;
-			if (dist < 8 && (info->range & (1 << dist)))
+			if (!(gridstate[ty][tx] & GS_HIDDEN))
 			{
-				gridstate[ty][tx] |= GS_SELECT;
-				attacking = true;
+				sbyte ty2 = ty * 2 + (tx & 1);
+
+				sbyte	dx = ux - tx; if (dx < 0) dx = -dx;
+				sbyte	dy = uy2 - ty2; if (dy < 0) dy = -dy;
+
+				byte	dist = (byte)(dx + dy - 2) >> 1;
+				if (dist >= minr && dist < maxr)
+				{
+					gridstate[ty][tx] |= GS_SELECT;
+					attacking = true;
+				}
 			}
 		}
 	}

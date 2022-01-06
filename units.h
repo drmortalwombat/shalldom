@@ -15,6 +15,11 @@
 #define UNIT_INFO_RANGE		0x0f
 #define UNIT_INFO_AIRBORNE	0x80
 
+#define UNIT_INFO_SHOT_RANGE	0x1f
+#define UNIT_INFO_SHOT_MIN		0x20
+#define UNIT_INFO_SHOT_DELAY	0x40
+#define UNIT_INFO_SHOT_AIR		0x80
+
 #define UNIT_INFO_DMG_AIR		0xf0
 #define UNIT_INFO_DMG_GROUND	0x0f
 #define UNIT_INFO_ARMOUR		0xf0
@@ -36,7 +41,7 @@ extern struct UnitInfo		UnitInfos[8];
 struct Unit
 {
 	char	mx, my, type, count;
-	char	tx, ty, id, pad7;
+	char	tx, ty, id, flags;
 };
 
 extern Unit	units[32];
@@ -45,7 +50,10 @@ extern byte numUnits;
 
 #define UNIT_TYPE			0x1f
 #define UNIT_TEAM			0x80
-#define UNIT_MOVED			0x40
+#define UNIT_COMMANDED		0x40
+
+#define UNIT_FLAG_RESTED	0x01
+#define UNIT_FLAG_REPAIR	0x02
 
 #define UNIT_ID_DIVISION	0x07
 
@@ -53,6 +61,10 @@ extern byte numUnits;
 #define UNIT_TEAM_2			0x80
 
 byte unit_distance(byte ua, byte ub);
+
+void unit_compact(void);
+
+void unit_add(char type, char mx, char my, char id);
 
 #pragma compile("units.c")
 

@@ -137,6 +137,17 @@ int main(void)
 
 	drawBaseGrid();
 
+#if 1
+	unit_add(UNIT_ARTILLERY | UNIT_TEAM_1, 4, 4, 0);
+	unit_add(UNIT_CHOPPER | UNIT_TEAM_1, 10, 3, 0);
+
+	for(char i=0; i<10; i++)
+		unit_add(UNIT_INFANTRY | UNIT_TEAM_2, 5 + 2 * i, 4, i);
+
+	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_2, 3, 3, 0);
+	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_2, 3, 4, 1);
+
+#else
 	numUnits = 16;
 	for(char i=0; i<numUnits; i++)
 	{
@@ -146,6 +157,7 @@ int main(void)
 		units[i].id = rand() % 5;
 		units[i].count = 5;
 	}
+#endif
 
 	cursor_init();
 	status_init();

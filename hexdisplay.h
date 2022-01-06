@@ -49,6 +49,8 @@ void drawUnits(void);
 
 void moveUnit(byte unit, byte x, byte y);
 
+void hideUnit(byte unit);
+
 void resetFlags(void);
 
 void calcVisibility(byte team);

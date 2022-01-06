@@ -53,7 +53,7 @@ void status_update_pos(char x, char y)
 }
 
 #define UNIT_COL	22
-#define STATE_COL	14
+#define STATE_COL	15
 
 void status_update_state(const char * state, byte color)
 {
@@ -63,13 +63,13 @@ void status_update_state(const char * state, byte color)
 		Screen[24 * 40 + STATE_COL + i] = state[i];
 		i++;
 	}
-	while (i < 8)
+	while (i < 7)
 	{
 		Screen[24 * 40 + STATE_COL + i] = ' ';
 		i++;
 	}
 
-	for(char i=0; i<8; i++)
+	for(char i=0; i<7; i++)
 		Color[24 * 40 + STATE_COL + i] = color;
 }
 

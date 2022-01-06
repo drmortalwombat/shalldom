@@ -41,7 +41,7 @@ void game_begin_phase(MovePhases phase)
 	{
 		units[i].tx = units[i].mx;
 		units[i].ty = units[i].my;
-		units[i].type &= ~UNIT_MOVED;
+		units[i].type &= ~UNIT_COMMANDED;
 	}
 
 	resetFlags();
@@ -60,7 +60,10 @@ void game_begin_phase(MovePhases phase)
 	if (pflags & MOVPHASE_INTERACTIVE)
 	{
 		if (pflags & MOVPHASE_ATTACK)
+		{
+			NumBattlePairs = 0;
 			status_update_state("ATTACK", color);
+		}
 		else
 			status_update_state("MOVE", color);		
 	}
@@ -72,28 +75,51 @@ void game_begin_phase(MovePhases phase)
 
 void game_execute_battles(void)
 {
-	for(byte ui=0; ui<numUnits; ui++)
+	Battle	b;
+
+	for(byte bi=0; bi<NumBattlePairs; bi++)
 	{
-		if (units[ui].type & UNIT_MOVED)
+		byte	du = BattlePairs[bi].to;
+		if (du != 0xff)
 		{
-			byte tx = units[ui].tx;
-			byte ty = units[ui].ty;
+			battle_init(&b, du);
+			window_open(4, 4, 12, 15);
 
-			byte uj = gridunits[ty][tx];
-
-			window_open(4, 4, 12, 15);			
-			Battle	b;
-			memset(&b, 0xff, sizeof(b));
-			battle_init(&b, ui, uj);
-			while (battle_fire(&b))
+			for(byte bj=bi; bj<NumBattlePairs; bj++)
 			{
-				for(char phase=0; phase<8; phase++)
+				if (du == BattlePairs[bj].to)
 				{
-					battle_fire_animate(&b, phase);
-					vic_waitFrame();
+					BattlePairs[bj].to = 0xff;
+					battle_begin_attack(&b, BattlePairs[bj].from);
+
+					while (battle_fire(&b))
+					{
+						for(char phase=0; phase<4; phase++)
+						{
+							battle_fire_animate(&b, phase);
+							vic_waitFrame();
+						}
+					}
+
+					for(char i=0; i<4; i++)
+					{
+						for(char phase=0; phase<4; phase++)
+						{
+							battle_fire_animate(&b, phase);
+							vic_waitFrame();
+						}				
+					}
+
+					battle_complete_attack(&b);
 				}
 			}
+
 			battle_complete(&b);
+
+			unit_compact();
+			drawUnits();
+
+			window_fill(0x00);
 			window_close();
 		}
 	}
@@ -137,7 +163,7 @@ void game_selecthex(void)
 		if (gridstate[gridY][gridX] & GS_UNIT)
 		{
 			byte	unit = gridunits[gridY][gridX];
-			if ((units[unit].type & (UNIT_TEAM | UNIT_MOVED)) == team)
+			if ((units[unit].type & (UNIT_TEAM | UNIT_COMMANDED)) == team)
 			{
 				if (pflags & MOVPHASE_ATTACK)
 				{
@@ -156,12 +182,13 @@ void game_selecthex(void)
 	else if (gridstate[gridY][gridX] & GS_SELECT)
 	{
 		resetMovement();
-		units[SelectedUnit].type |= UNIT_MOVED;
+		units[SelectedUnit].type |= UNIT_COMMANDED;
 
 		if (pflags & MOVPHASE_ATTACK)
 		{
 			units[SelectedUnit].tx = gridX;
 			units[SelectedUnit].ty = gridY;
+			battle_add_pair(SelectedUnit, gridunits[gridY][gridX]);
 		}
 		else
 			moveUnit(SelectedUnit, gridX, gridY);
@@ -186,11 +213,14 @@ void game_undohex(void)
 	if (gridstate[gridY][gridX] & GS_UNIT)
 	{
 		char ui = gridunits[gridY][gridX];
-		if ((units[ui].type & (UNIT_TEAM | UNIT_MOVED)) == (team | UNIT_MOVED))
+		if ((units[ui].type & (UNIT_TEAM | UNIT_COMMANDED)) == (team | UNIT_COMMANDED))
 		{
-			units[ui].type &= ~UNIT_MOVED;
+			units[ui].type &= ~UNIT_COMMANDED;
 			if (pflags & MOVPHASE_ATTACK)
+			{
 				moveUnit(ui, units[ui].tx, units[ui].ty);
+				battle_cancel_pair(ui);
+			}
 			updateColors();
 			updateBaseGrid();
 		}
@@ -205,6 +235,8 @@ enum JoystickMenu
 	JM_INFO,
 	JM_MENU
 };
+
+char	keyRepeatDelay;
 
 void game_input(void)
 {
@@ -278,6 +310,8 @@ void game_input(void)
 
 	if (keyb_key)
 	{
+		keyRepeatDelay = 8;
+
 		switch (keyb_codes[keyb_key & 0x7f])
 		{
 		case ' ':
@@ -310,6 +344,27 @@ void game_input(void)
 			break;
 		}
 	}
+	else if (keyRepeatDelay == 0)
+	{
+		if (key_pressed(KEY_CODE_CSR_RIGHT))
+		{
+			if (key_shift())
+				cursor_move(-8, 0);
+			else
+				cursor_move( 8, 0);
+		}
+		else if (key_pressed(KEY_CODE_CSR_DOWN))
+		{
+			if (key_shift())
+				cursor_move(0, -8);
+			else
+				cursor_move(0, 8);
+		}		
+		else
+			keyRepeatDelay = 8;
+	}
+	else
+		keyRepeatDelay--;
 
 	if (gridstate[gridY][gridX] & GS_UNIT)
 		status_update_unit(gridunits[gridY][gridX]);
