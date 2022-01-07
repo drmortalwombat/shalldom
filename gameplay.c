@@ -94,7 +94,7 @@ void game_execute_battles(void)
 
 					while (battle_fire(&b))
 					{
-						for(char phase=0; phase<4; phase++)
+						for(char phase=0; phase<8; phase++)
 						{
 							battle_fire_animate(&b, phase);
 							vic_waitFrame();
@@ -103,7 +103,7 @@ void game_execute_battles(void)
 
 					for(char i=0; i<4; i++)
 					{
-						for(char phase=0; phase<4; phase++)
+						for(char phase=0; phase<8; phase++)
 						{
 							battle_fire_animate(&b, phase);
 							vic_waitFrame();

@@ -6,7 +6,7 @@
 
 BattlePair	BattlePairs[32];
 byte		NumBattlePairs;
-
+byte		Explosion;
 
 
 void battle_add_pair(byte from, byte to)
@@ -138,8 +138,12 @@ void battle_begin_attack(Battle * b, byte aunit)
 
 }
 
+#define SHOTS_IN_FLIGHT	4
+
 bool battle_fire(Battle * b)
 {
+	spr_show(7, false);
+
 	byte	f = b->firedShots;
 	if (f < b->numShots)
 	{
@@ -163,9 +167,9 @@ bool battle_fire(Battle * b)
 			b->shots[f] = 0;
 	}
 
-	if (f >= 8)
+	if (f >= SHOTS_IN_FLIGHT)
 	{
-		f = b->firedShots - 8;
+		f = b->firedShots - SHOTS_IN_FLIGHT;
 		if (f < b->numShots)
 		{
 			if (b->shots[f] & BATTLE_SHOT_FIRED)
@@ -175,10 +179,11 @@ bool battle_fire(Battle * b)
 
 				if (b->health[ti][to] > b->damage[1 - ti])
 					b->health[ti][to] -= b->damage[1 - ti];
-				else
+				else if (b->health[ti][to] > 0)
 				{
 					b->health[ti][to] = 0;
 					window_clear_sprite(2 + 6 * ti, 24 * to, 0x55)
+					spr_set(7, true, 24 + (winX + 2 + 6 * ti) * 8, 50 + (winY + 3 * to) * 8, 64 + 24, 7, true, false, false);
 				}
 			}	
 		}
@@ -186,17 +191,16 @@ bool battle_fire(Battle * b)
 
 	b->firedShots++;
 
-	return b->firedShots < b->numShots + 8;
+	return b->firedShots < b->numShots + SHOTS_IN_FLIGHT;
 }
 
 bool battle_fire_animate(Battle * b, char phase)
 {
-	vic.color_border++;
 	char si = 0;
 	char step = b->firedShots;
 	char from = 0, to = step;
-	if (step > 8)
-		from = step - 8;
+	if (step > SHOTS_IN_FLIGHT)
+		from = step - SHOTS_IN_FLIGHT;
 	if (to > b->numShots)
 		to = b->numShots;
 
@@ -209,7 +213,7 @@ bool battle_fire_animate(Battle * b, char phase)
 			byte	to = (b->shots[fi] & BATTLE_SHOT_DST) >> 4;
 			byte	tc = (b->shots[fi] & BATTLE_SHOT_COMBATAND) ? 0 : 1;
 
-			byte	pi = (step - fi - 1) * 4 + phase;
+			byte	pi = (step - fi - 1) * 8 + phase;
 
 			int fy = 60 + (winY + 3 * from) * 8, ty = 60 + (winY + 3 * to) * 8;
 			int fx = 32 + (winX + 2 + 6 * fc) * 8, tx = 32 + (winX + 2 + 6 * tc) * 8;
@@ -219,12 +223,12 @@ bool battle_fire_animate(Battle * b, char phase)
 			si++;
 		}
 	}
-	while (si < 8)
+	while (si < SHOTS_IN_FLIGHT)
 	{
 		spr_show(si, false);
 		si++;
-	}	
-	vic.color_border--;
+	}
+	spr_image(7, 64 + 24 + phase);
 }
 
 void battle_return_units(Battle * b, byte t)
