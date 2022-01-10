@@ -448,6 +448,33 @@ void scroll(sbyte dx, sbyte dy)
 
 }
 
+void hex_scroll_into_view(byte unit)
+{
+	char px = units[unit].mx, py = units[unit].my;
+
+	for(;;)
+	{
+		sbyte	dx = 0, dy = 0;
+
+		if (px < ox + 2 && ox > 0)
+			dx = -1;
+		else if (px > ox + 10 && ox < 18)
+			dx = 1;
+
+		if (py < oy + 2 && oy > 0)
+			dy = -1;
+		else if (py > oy + 6 && oy < 24)
+			dy = 1;
+
+		if (dx == 0 && dy == 0)
+			return;
+
+		scroll(dx, dy);
+		vic_waitFrame();
+	}
+}
+
+
 void drawBaseCell(byte cx, byte cy)
 {
 	byte * dp = hexhires[cy] + cx * 3 * 8;

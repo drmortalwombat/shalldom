@@ -82,8 +82,22 @@ void game_execute_battles(void)
 		byte	du = BattlePairs[bi].to;
 		if (du != 0xff)
 		{
+			hex_scroll_into_view(du);
+	
+			char ux = units[du].mx - ox;
+
+			if (ux < 7)
+				window_open(24, 4, 12, 15);
+			else
+				window_open(4, 4, 12, 15);
+
 			battle_init(&b, du);
-			window_open(4, 4, 12, 15);
+
+			for(char phase=0; phase<=16; phase++)
+			{
+				battle_enter_units(&b, 1, phase);
+				vic_waitFrame();
+			}
 
 			for(byte bj=bi; bj<NumBattlePairs; bj++)
 			{
@@ -91,6 +105,12 @@ void game_execute_battles(void)
 				{
 					BattlePairs[bj].to = 0xff;
 					battle_begin_attack(&b, BattlePairs[bj].from);
+
+					for(char phase=0; phase<=16; phase++)
+					{
+						battle_enter_units(&b, 0, phase);
+						vic_waitFrame();
+					}
 
 					while (battle_fire(&b))
 					{

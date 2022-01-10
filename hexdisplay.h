@@ -63,6 +63,8 @@ bool calcMovement(byte unit);
 
 bool calcAttack(byte unit);
 
+void hex_scroll_into_view(byte unit);
+
 void scroll(sbyte dx, sbyte dy);
 
 void drawBaseGrid(void);

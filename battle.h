@@ -40,6 +40,8 @@ void battle_init(Battle * b, byte dunit);
 // Add attacker to battle
 void battle_begin_attack(Battle * b, byte aunit);
 
+void battle_enter_units(Battle * b, byte t, byte phase);
+
 // Complete battle with attacker
 void battle_complete_attack(Battle * b);
 

@@ -99,4 +99,4 @@ void cursor_move(sbyte dx, sbyte dy)
 	spr_move(2, sx, sy);
 
 	status_update_pos(gridX, gridY);
-	}
+}

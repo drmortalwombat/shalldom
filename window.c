@@ -36,6 +36,20 @@ void window_color_rect(char x, char y, char w, char h, char color)
 	}
 }
 
+void window_fill_rect(char x, char y, char w, char h, char pat)
+{
+	char	*	wp = winP + 8 * (40 * y + x);
+	char		bw = 8 * w;
+	
+	for(char i=0; i<h; i++)
+	{
+		for(char j=0; j<bw; j++)
+			wp[j] = pat;
+		wp += 320;
+	}
+
+}
+
 void window_scroll(void)
 {
 	char	*	wp = winP;

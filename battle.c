@@ -29,6 +29,19 @@ void battle_cancel_pair(byte from)
 	NumBattlePairs = i;
 }
 
+char battle_num_units(Battle * b, byte t)
+{
+	__assume (t < 2);
+
+	Unit		*	u = units + b->units[t];
+	byte			nu = 0;
+
+	for(byte i=0; i<5; i++)
+		if (b->health[t][i] > 0)
+			nu++;
+
+	return nu;
+}
 
 void battle_init_health(Battle * b, byte t)
 {
@@ -102,6 +115,12 @@ void battle_init(Battle * b, byte dunit)
 	b->units[1] = dunit;
 
 	battle_init_health(b, 1);
+
+	window_color_rect( 0, 0, 12, 15, 0x00);
+	window_fill(0x55);
+
+	for(char i=0; i<8; i++)
+		spr_set(i, false, 0, 0, 64 + 22, 7, true, false, false);	
 }
 
 void battle_begin_attack(Battle * b, byte aunit)
@@ -111,16 +130,46 @@ void battle_begin_attack(Battle * b, byte aunit)
 	battle_init_health(b, 0);
 
 	battle_init_shots(b);
+}
 
-	window_fill(0x55);
+void battle_enter_units(Battle * b, byte t, byte phase)
+{
+	Unit		*	u = units + b->units[t];
 
-	for(byte t=0; t<2; t++)
+	if (phase == 0)	
 	{
-		Unit		*	u = units + b->units[t];
+		char color = TeamColors[(u->type & UNIT_TEAM) ? 1 : 0];
+		char image = 64 + (u->type & UNIT_TYPE);
+		char ca = color | (TerrainColor[gridstate[u->my][u->mx] & GS_TERRAIN] << 4);
 
-		char	ca = TeamColors[(u->type & UNIT_TEAM) ? 1 : 0] | (TerrainColor[gridstate[u->my][u->mx] & GS_TERRAIN] << 4);
+		for(char i=3; i<8; i++)
+			spr_set(i, true, 0, 0, image, color, true, false, false);		
 
 		window_color_rect( 6 * t, 0, 6, 15, ca);
+		window_fill_rect( 6 * t, 0, 6, 15, 0x55);
+	}
+
+	if (phase < 16)
+	{
+		byte	tc = (u->type & UNIT_TEAM) ? 1 : 0;
+
+		int	ux = (u->mx - ox) * 24 + 24, uy = (u->my - oy) * 24 + 50 + 12 * (u->mx & 1);
+		int tx = 32 + (winX + 2 + 6 * t) * 8;
+
+		for(byte i=0; i<5; i++)
+		{
+			if (b->health[t][i])
+			{
+				int ty = 60 + (winY + 3 * i) * 8;
+
+				spr_show(i + 3, true);
+				spr_move(i + 3, ux + ((tx - ux) * phase >> 4), uy + ((ty - uy) * phase >> 4));
+			}
+		}
+	}
+	else
+	{
+		char	ca = TeamColors[(u->type & UNIT_TEAM) ? 1 : 0] | (TerrainColor[gridstate[u->my][u->mx] & GS_TERRAIN] << 4);
 
 		const char	*	sp = hex_sprite_data(u->type & UNIT_TYPE);
 
@@ -131,11 +180,10 @@ void battle_begin_attack(Battle * b, byte aunit)
 				window_put_sprite(2 + 6 * t, y, sp)
 			y += 24;
 		}
+
+		for(char i=0; i<8; i++)
+			spr_set(i, false, 0, 0, 64 + 22, 7, true, false, false);
 	}
-
-	for(char i=0; i<8; i++)
-		spr_set(i, false, 0, 0, 64 + 22, 7, true, false, false);
-
 }
 
 #define SHOTS_IN_FLIGHT	4
@@ -184,6 +232,9 @@ bool battle_fire(Battle * b)
 					b->health[ti][to] = 0;
 					window_clear_sprite(2 + 6 * ti, 24 * to, 0x55)
 					spr_set(7, true, 24 + (winX + 2 + 6 * ti) * 8, 50 + (winY + 3 * to) * 8, 64 + 24, 7, true, false, false);
+
+					if (!battle_num_units(b, ti))
+						b->numShots = b->firedShots;
 				}
 			}	
 		}
@@ -234,12 +285,8 @@ bool battle_fire_animate(Battle * b, char phase)
 void battle_return_units(Battle * b, byte t)
 {
 	Unit		*	u = units + b->units[t];
-	byte			nu = 0;
 
-	for(byte i=0; i<5; i++)
-		if (b->health[t][i] > 0)
-			nu++;
-	u->count = nu;	
+	u->count = battle_num_units(b, t);
 }
 
 void battle_complete_attack(Battle * b)
