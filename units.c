@@ -1,6 +1,6 @@
 #include "units.h"
 #include "hexdisplay.h"
-
+#include "hexmap.h"
 
 
 // UnitInfo
@@ -89,18 +89,9 @@ Unit	units[32];
 byte	numUnits;
 
 
-byte unit_distance(byte ua, byte ub)
+unsigned unit_distance_square(byte ua, byte ub)
 {
-	sbyte 	ux = units[ua].mx, uy = units[ua].my;
-	sbyte 	uy2 = uy * 2 + (ux & 1);
-	
-	sbyte 	tx = units[ub].mx, ty = units[ub].my;
-	sbyte 	ty2 = ty * 2 + (tx & 1);
-
-	sbyte	dx = ux - tx; if (dx < 0) dx = -dx;
-	sbyte	dy = uy2 - ty2; if (dy < 0) dy = -dy;
-
-	return (byte)(dx + dy - 2) >> 1;
+	return hex_dist_square(units[ua].mx, units[ua].my, units[ub].mx, units[ub].my);
 }
 
 void unit_compact(void)
@@ -131,4 +122,67 @@ void unit_add(char type, char mx, char my, char id)
 	u->count = 5;
 	u->flags = 0;
 	numUnits++;
+}
+
+bool unit_can_attack(char from, char to)
+{
+	__assume(from < 32);
+	__assume(to < 32);
+
+	Unit		*	u = units + from, * eu = units + to;
+
+	UnitInfo	*	ui = UnitInfos + (u->type & UNIT_TYPE);
+	UnitInfo	*	eui = UnitInfos + (eu->type & UNIT_TYPE);
+
+	unsigned	maxr = hex_size_square(ui->range & UNIT_INFO_SHOT_RANGE);
+	unsigned	minr = hex_size_square(ui->range & UNIT_INFO_SHOT_MIN ? 2 : 1);
+
+	unsigned	dist = hex_dist_square(u->mx, u->my, eu->mx, eu->my);
+
+	if (dist >= minr && dist <= maxr)
+	{
+		int	damage;
+		if (eui->view & UNIT_INFO_AIRBORNE)
+			damage = ui->damage >> 4;
+		else
+			damage = ui->damage & UNIT_INFO_DMG_GROUND;
+
+		return damage > 0;
+	}
+
+	return false;
+}
+
+int unit_attack_value(char from, char to)
+{
+	__assume(from < 32);
+	__assume(to < 32);
+
+	Unit		*	u = units + from, * eu = units + to;
+
+	UnitInfo	*	ui = UnitInfos + (u->type & UNIT_TYPE);
+	UnitInfo	*	eui = UnitInfos + (eu->type & UNIT_TYPE);
+
+	unsigned	maxr = hex_size_square(ui->range & UNIT_INFO_SHOT_RANGE);
+	unsigned	minr = hex_size_square(ui->range & UNIT_INFO_SHOT_MIN ? 2 : 1);
+
+	unsigned	dist = hex_dist_square(u->mx, u->my, eu->mx, eu->my);
+
+	if (dist >= minr && dist <= maxr)
+	{
+		int	damage;
+		if (eui->view & UNIT_INFO_AIRBORNE)
+			damage = ui->damage >> 4;
+		else
+			damage = ui->damage & UNIT_INFO_DMG_GROUND;
+
+		if (damage > 0)
+		{
+			byte	ns = ui->shots >> 4;
+
+			return damage * ns * u->count;
+		}
+	}
+
+	return 0;
 }

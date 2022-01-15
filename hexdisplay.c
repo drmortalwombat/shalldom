@@ -172,6 +172,8 @@ const byte TeamColors[2] = {
 
 void overlay(byte cx, byte cy, byte si, byte c)
 {
+	__assume(cx < 16);
+
 	byte * cp = hexscreen[cy] + cx * 3;
 
 	if (cx & 1)
@@ -191,12 +193,8 @@ void overlay(byte cx, byte cy, byte si, byte c)
 
 	byte * dp = hexhires[cy] + cx * 3 * 8;
 
-	byte ly = 8;
 	if (cx & 1)
-	{
 		dp += 325;
-		ly = 3;
-	}
 
 	const byte * sp = sprites + si * 64;
 
@@ -214,12 +212,8 @@ void overlay(byte cx, byte cy, byte si, byte c)
 		dp[24] ^= m2 << 4
 		dp++;
 
-		ly--;
-		if (!ly)
-		{
+		if (!((unsigned)dp & 7))
 			dp += 312;
-			ly = 8;
-		}
 	}
 }
 
@@ -477,6 +471,8 @@ void hex_scroll_into_view(byte unit)
 
 void drawBaseCell(byte cx, byte cy)
 {
+	__assume(cx < 16);
+
 	byte * dp = hexhires[cy] + cx * 3 * 8;
 
 	if (cx & 1)
@@ -829,14 +825,7 @@ bool calcAttack(byte unit)
 {
 	UnitInfo	*	info = UnitInfos + (units[unit].type & UNIT_TYPE);
 
-	const byte * cost = info->speed;
-
-	sbyte ux = units[unit].mx, uy = units[unit].my;
-	sbyte uy2 = uy * 2 + (ux & 1);
 	byte	team = units[unit].type & UNIT_TEAM;
-
-	byte			maxr = info->range & UNIT_INFO_SHOT_RANGE;
-	byte			minr = info->range & UNIT_INFO_SHOT_MIN ? 1 : 0;
 
 	bool	attacking = false;
 
@@ -848,13 +837,7 @@ bool calcAttack(byte unit)
 			sbyte tx = units[i].mx, ty = units[i].my;
 			if (!(gridstate[ty][tx] & GS_HIDDEN))
 			{
-				sbyte ty2 = ty * 2 + (tx & 1);
-
-				sbyte	dx = ux - tx; if (dx < 0) dx = -dx;
-				sbyte	dy = uy2 - ty2; if (dy < 0) dy = -dy;
-
-				byte	dist = (byte)(dx + dy - 2) >> 1;
-				if (dist >= minr && dist < maxr)
+				if (unit_can_attack(unit, i))
 				{
 					gridstate[ty][tx] |= GS_SELECT;
 					attacking = true;

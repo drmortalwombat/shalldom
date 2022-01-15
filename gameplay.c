@@ -7,6 +7,7 @@
 #include "hexdisplay.h"
 #include "units.h"
 #include "window.h"
+#include "playerai.h"
 
 MovePhases MovePhase;
 
@@ -171,6 +172,22 @@ void game_complete_phase(void)
 			game_begin_phase(MP_MOVE_1);
 			break;
 	}
+}
+
+void game_invoke_playerai(void)
+{
+	byte	pflags = MovePhaseFlags[MovePhase];
+
+	if (pflags & MOVPHASE_ATTACK)
+	{
+		playerai_select_battles(pflags & MOVPHASE_TEAM);
+	}
+	else
+	{
+		playerai_select_move(pflags & MOVPHASE_TEAM);		
+	}
+
+	game_complete_phase();
 }
 
 void game_selecthex(void)
@@ -359,6 +376,11 @@ void game_input(void)
 			window_write(0, 0, "HELLO WORLD");
 			window_write(0, 1, "2ND LINE");
 			break;
+
+		case 'a':
+			game_invoke_playerai();
+			break;
+
 		case 'e':
 			window_close();
 			break;

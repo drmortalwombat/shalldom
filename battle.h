@@ -21,9 +21,10 @@ struct Battle
 struct BattlePair
 {
 	byte	from, to;
+	int		value;
 };
 
-extern BattlePair	BattlePairs[32];
+extern BattlePair	BattlePairs[64];
 extern byte			NumBattlePairs;
 
 

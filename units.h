@@ -60,11 +60,15 @@ extern byte numUnits;
 #define UNIT_TEAM_1			0x00
 #define UNIT_TEAM_2			0x80
 
-byte unit_distance(byte ua, byte ub);
+unsigned unit_distance_square(byte ua, byte ub);
 
 void unit_compact(void);
 
 void unit_add(char type, char mx, char my, char id);
+
+bool unit_can_attack(char from, char to);
+
+int unit_attack_value(char from, char to);
 
 #pragma compile("units.c")
 

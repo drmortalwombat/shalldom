@@ -4,7 +4,7 @@
 #include "hexdisplay.h"
 
 
-BattlePair	BattlePairs[32];
+BattlePair	BattlePairs[64];
 byte		NumBattlePairs;
 byte		Explosion;
 
@@ -58,7 +58,7 @@ void battle_init_health(Battle * b, byte t)
 
 void battle_init_shots(Battle * b)
 {
-	byte	dist = unit_distance(b->units[0], b->units[1]);
+	unsigned	dist = unit_distance_square(b->units[0], b->units[1]);
 
 	byte	si = 0;
 	for(byte t=0; t<2; t++)
@@ -71,10 +71,10 @@ void battle_init_shots(Battle * b)
 
 		byte			ns = ui->shots >> 4;
 
-		byte			maxr = ui->range & UNIT_INFO_SHOT_RANGE;
-		byte			minr = ui->range & UNIT_INFO_SHOT_MIN ? 1 : 0;
+		unsigned	maxr = hex_size_square(ui->range & UNIT_INFO_SHOT_RANGE);
+		unsigned	minr = hex_size_square(ui->range & UNIT_INFO_SHOT_MIN ? 2 : 1);
 
-		if (dist >= minr && dist < maxr)
+		if (dist >= minr && dist <= maxr)
 		{
 			if (eui->view & UNIT_INFO_AIRBORNE)
 				b->damage[t] = ui->damage >> 4;
