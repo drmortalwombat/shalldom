@@ -153,7 +153,7 @@ void battle_enter_units(Battle * b, byte t, byte phase)
 	{
 		byte	tc = (u->type & UNIT_TEAM) ? 1 : 0;
 
-		int	ux = (u->mx - ox) * 24 + 24, uy = (u->my - oy) * 24 + 50 + 12 * (u->mx & 1);
+		int	ux = (u->mx - ox) * 24 + 28, uy = (u->my - oy) * 24 + 50 + 12 * (u->mx & 1);
 		int tx = 32 + (winX + 2 + 6 * t) * 8;
 
 		for(byte i=0; i<5; i++)

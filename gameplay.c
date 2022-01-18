@@ -8,6 +8,7 @@
 #include "units.h"
 #include "window.h"
 #include "playerai.h"
+#include "hexmap.h"
 
 MovePhases MovePhase;
 
@@ -66,7 +67,10 @@ void game_begin_phase(MovePhases phase)
 			status_update_state("ATTACK", color);
 		}
 		else
+		{
+			NumPaths = 0;
 			status_update_state("MOVE", color);		
+		}
 	}
 	else
 	{
@@ -148,6 +152,67 @@ void game_execute_battles(void)
 	cursor_show();
 }
 
+void game_swap_moves(void)
+{
+	byte	pflags = MovePhaseFlags[MovePhase];
+	byte 	team = pflags & MOVPHASE_TEAM;
+
+	for(char i=0; i<numUnits; i++)
+	{
+		if ((units[i].type & (UNIT_TEAM | UNIT_COMMANDED)) == (team | UNIT_COMMANDED))
+			moveUnit(i, units[i].tx, units[i].ty);
+	}
+
+	updateColors();
+	updateBaseGrid();	
+}
+
+void game_exceute_moves(void)
+{
+	for(char pi=0; pi<NumPaths; pi++)
+	{
+		Path	*	p = Paths + pi;
+		char		x = p->sx, y = p->sy;
+
+		if (gridstate[y][x] & GS_UNIT)
+		{
+			char		ui = gridunits[y][x];
+
+			hex_scroll_into_view(ui);
+
+			Unit	*	u = units + ui;
+
+			char color = TeamColors[(u->type & UNIT_TEAM) ? 1 : 0];
+			char image = 64 + (u->type & UNIT_TYPE);
+
+			spr_set(3, true, 0, 0, image, color, true, false, false);
+
+			hideUnit(ui);
+			updateGridCell(x, y);
+
+			for(char i=0; i<p->len; i++)
+			{
+				int	ux = (x - ox) * 24 + 28, uy = (y - oy) * 24 + 50 + 12 * (x & 1);
+				char	d = p->steps[p->len - i - 1];
+				y = (2 * y + (x & 1) - PathY[d]) >> 1;
+				x -= PathX[d];
+				int	tx = (x - ox) * 24 + 28, ty = (y - oy) * 24 + 50 + 12 * (x & 1);
+
+				for(char j=0; j<16; j++)
+				{
+					spr_move(3, ux + ((tx - ux) * j >> 4), uy + ((ty - uy) * j >> 4));
+					vic_waitFrame();
+				}
+			}
+
+			moveUnit(ui, x, y);
+			updateGridCell(x, y);
+
+			spr_show(3, false);
+		}
+	}
+}
+
 void game_complete_phase(void)
 {
 	byte	pflags = MovePhaseFlags[MovePhase];
@@ -155,6 +220,11 @@ void game_complete_phase(void)
 	if (pflags & MOVPHASE_ATTACK)
 	{
 		game_execute_battles();
+	}
+	else
+	{
+		game_swap_moves();
+		game_exceute_moves();
 	}
 
 	switch (MovePhase)
@@ -218,7 +288,6 @@ void game_selecthex(void)
 	}
 	else if (gridstate[gridY][gridX] & GS_SELECT)
 	{
-		resetMovement();
 		units[SelectedUnit].type |= UNIT_COMMANDED;
 
 		if (pflags & MOVPHASE_ATTACK)
@@ -228,7 +297,12 @@ void game_selecthex(void)
 			battle_add_pair(SelectedUnit, gridunits[gridY][gridX]);
 		}
 		else
+		{
 			moveUnit(SelectedUnit, gridX, gridY);
+			hex_add_path(SelectedUnit);
+		}
+
+		resetMovement();
 
 		updateColors();
 		updateBaseGrid();
@@ -257,6 +331,10 @@ void game_undohex(void)
 			{
 				moveUnit(ui, units[ui].tx, units[ui].ty);
 				battle_cancel_pair(ui);
+			}
+			else
+			{
+				hex_cancel_path(SelectedUnit);				
 			}
 			updateColors();
 			updateBaseGrid();

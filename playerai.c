@@ -4,6 +4,23 @@
 #include "battle.h"
 #include <c64/vic.h>
 
+char * dbgstr = (char *)0x0400;
+
+void dbglog(const char * str)
+{
+	while (*str)
+		*dbgstr++ = *str++;
+	*dbgstr++ = ' ';
+}
+
+void dbglogi(int i)
+{
+	char	buffer[10];
+	itoa(i, buffer, 10);
+	dbglog(buffer);
+}
+
+
 int playerai_eval_move(byte unit, byte gx, byte gy)
 {
 	Unit	*	ua = units + unit;
@@ -73,6 +90,8 @@ void playerai_select_move(byte team)
 				{
 					moveUnit(i, maxx, maxy);
 					ua->type |= UNIT_COMMANDED;
+
+					hex_add_path(i);
 				}
 
 				resetMovement();

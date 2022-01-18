@@ -71,6 +71,8 @@ void drawBaseGrid(void);
 
 void updateBaseGrid(void);
 
+void updateGridCell(char x, char y);
+
 #pragma compile("hexdisplay.c")
 
 #endif

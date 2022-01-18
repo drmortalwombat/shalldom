@@ -1,4 +1,6 @@
 #include "hexmap.h"
+#include "hexdisplay.h"
+#include "units.h"
 
 const unsigned hex_x_sq[32] = {
 	0, 3, 12, 27, 48, 75, 108, 147, 192, 243, 300, 363, 432, 507, 588, 675, 768, 867, 972, 1083, 1200, 1323, 
@@ -25,4 +27,69 @@ unsigned hex_dist_square(byte xa, byte ya, byte xb, byte yb)
 	char	dy = (ya2 > yb2) ? ya2 - yb2 : yb2 - ya2;
 
 	return hex_x_sq[dx] + hex_y_sq[dy];
+}
+
+Path		Paths[20];
+char		NumPaths;
+
+sbyte PathX[6] = {  0,  1,  1,  0, -1, -1};
+sbyte PathY[6] = { -2, -1,  1,  2,  1, -1};
+
+void hex_add_path(char unit)
+{
+	Path	*	path = Paths + NumPaths;
+	Unit	*	u = units + unit
+
+	path->ex = u->mx; path->ey = u->my;
+	path->sx = u->tx; path->sy = u->ty;
+
+	sbyte	x = path->ex, y2 = 2 * path->ey + (path->ex & 1);
+	sbyte	sx = path->sx, sy2 = 2 * path->sy + (path->sx & 1);
+	char	len = 0;
+
+	gridstate[path->sy][path->sx] |= GS_SELECT;
+	gridstate[path->ey][path->ex] &= ~GS_SELECT;
+
+	while (len < 8 && x != sx || y2 != sy2)
+	{		
+		char mind = 0, mini = 0;
+		for(char i=0; i<6; i++)
+		{
+			sbyte	dx = x + PathX[i], dy = (y2 + PathY[i]) >> 1;
+			if (dx >= 0 && dx < 31 && dy >= 0 && dy < 31 && (gridstate[dy][dx] & GS_SELECT))
+			{
+				char	d = gridunits[dy][dx];
+				if (d > mind)
+				{
+					mind = d;
+					mini = i;
+				}
+			}
+		}
+
+		path->steps[len] = mini;
+		x += PathX[mini]; y2 += PathY[mini];
+		len++;
+	}
+	path->len = len;
+
+	NumPaths++;
+}
+
+void hex_cancel_path(char unit)
+{
+	Unit	*	u = units + unit
+
+	char	i = 0;
+	while (i < NumPaths && (Paths[i].sx != u->mx || Paths[i].sy != u->my))
+		i++;
+	if (i < NumPaths)
+	{
+		NumPaths--;
+		while (i < NumPaths)
+		{
+			Paths[i] = Paths[i + 1];
+			i++
+		}
+	}
 }

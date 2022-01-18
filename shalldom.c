@@ -137,7 +137,10 @@ int main(void)
 
 	drawBaseGrid();
 
-#if 1
+#if 0
+	unit_add(UNIT_CHOPPER | UNIT_TEAM_1, 3, 5, 0);
+	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_2, 3, 3, 0);
+#elif 1
 	unit_add(UNIT_ARTILLERY | UNIT_TEAM_1, 4, 4, 0);
 	unit_add(UNIT_CHOPPER | UNIT_TEAM_1, 10, 3, 0);
 

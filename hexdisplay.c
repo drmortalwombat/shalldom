@@ -613,42 +613,55 @@ void updateColors(void)
 	}
 }
 
+void updateViewCell(char cx, char cy)
+{
+	if (cy < (char)(8 - (cx & 1)))
+	{
+		char gstate = gridstate[cy + oy][cx + ox];
+		char vstate = viewstate[cy][cx];
+
+		viewstate[cy][cx] = gstate;
+
+		bool	changed = (gstate ^ vstate) & GS_FLAGS;
+		if (gstate & GS_UNIT)
+			changed = true;
+
+		if (changed)
+		{
+			if (vstate & GS_FLAGS)
+				drawBaseCell(cx, cy);
+
+			if ((gstate & GS_UNIT) && !(gstate & GS_HIDDEN))
+			{
+				byte gi = gridunits[cy + oy][cx + ox];
+				overlay(cx, cy, units[gi].type & UNIT_TYPE, units[gi].type & UNIT_TEAM ? TeamColors[1] : TeamColors[0]);
+				if (units[gi].type & UNIT_COMMANDED)
+					gstate |= GS_GHOST;
+			}
+
+			if (gstate & GS_GHOST)
+				ghostBaseCell(cx, cy);
+			else if (gstate & GS_SELECT)
+				selectBaseCell(cx, cy);					
+		}
+	}
+}
+
+void updateGridCell(char x, char y)
+{
+	if (x >= ox && x < ox + 13 && y >= oy)
+	{
+		updateViewCell(x - ox, y - oy);
+	}
+}
+
 void updateBaseGrid(void)
 {
 	for(char cy=0; cy<8; cy++)
 	{
 		for(char cx=0; cx<13; cx++)
 		{
-			if (cy < (char)(8 - (cx & 1)))
-			{
-				char gstate = gridstate[cy + oy][cx + ox];
-				char vstate = viewstate[cy][cx];
-
-				viewstate[cy][cx] = gstate;
-
-				bool	changed = (gstate ^ vstate) & GS_FLAGS;
-				if (gstate & GS_UNIT)
-					changed = true;
-
-				if (changed)
-				{
-					if (vstate & GS_FLAGS)
-						drawBaseCell(cx, cy);
-
-					if ((gstate & GS_UNIT) && !(gstate & GS_HIDDEN))
-					{
-						byte gi = gridunits[cy + oy][cx + ox];
-						overlay(cx, cy, units[gi].type & UNIT_TYPE, units[gi].type & UNIT_TEAM ? TeamColors[1] : TeamColors[0]);
-						if (units[gi].type & UNIT_COMMANDED)
-							gstate |= GS_GHOST;
-					}
-
-					if (gstate & GS_GHOST)
-						ghostBaseCell(cx, cy);
-					else if (gstate & GS_SELECT)
-						selectBaseCell(cx, cy);					
-				}
-			}
+			updateViewCell(cx, cy);
 		}
 	}
 }
@@ -758,10 +771,10 @@ void markMovement(sbyte gx, sbyte gy2, sbyte dist, const byte * cost)
 			else
 			{
 				gridstate[iy][ix] = gs | GS_SELECT;
+				gridunits[iy][ix] = dist;
+			
 				if (dist > 0)
 				{
-					gridunits[iy][ix] = dist;
-			
 					moveNodes[moveWrite].mx = gx;
 					moveNodes[moveWrite].my2 = gy2;
 					moveWrite = (moveWrite + 1) & 63;
