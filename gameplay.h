@@ -8,11 +8,14 @@ enum MovePhases
 {
 	MP_ATTACK_1,
 	MP_MOVE_2,
+	
 	MP_ATTACKING_1,
 	MP_MOVING_2,
+
 	MP_ATTACK_2,
 	MP_MOVE_1,
-	MP_ATTACKIN_2,
+
+	MP_ATTACKING_2,
 	MP_MOVING_1
 };
 

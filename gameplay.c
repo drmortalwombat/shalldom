@@ -74,7 +74,7 @@ void game_begin_phase(MovePhases phase)
 	}
 	else
 	{
-		status_update_state("EXECUTE", color);		
+		status_update_state("EXECUTE", color);
 	}
 }
 
@@ -217,31 +217,31 @@ void game_complete_phase(void)
 {
 	byte	pflags = MovePhaseFlags[MovePhase];
 
-	if (pflags & MOVPHASE_ATTACK)
+	if (pflags & MOVPHASE_INTERACTIVE)
 	{
-		game_execute_battles();
+		if (pflags & MOVPHASE_ATTACK)
+		{
+
+		}
+		else
+		{
+			game_swap_moves();			
+		}
 	}
 	else
 	{
-		game_swap_moves();
-		game_exceute_moves();
+		if (pflags & MOVPHASE_ATTACK)
+		{
+			game_execute_battles();
+		}
+		else
+		{
+			game_exceute_moves();
+		}
+
 	}
 
-	switch (MovePhase)
-	{
-		case MP_MOVE_1:
-			game_begin_phase(MP_ATTACK_2);
-			break;
-		case MP_ATTACK_2:
-			game_begin_phase(MP_MOVE_2);
-			break;
-		case MP_MOVE_2:
-			game_begin_phase(MP_ATTACK_1);
-			break;
-		case MP_ATTACK_1:
-			game_begin_phase(MP_MOVE_1);
-			break;
-	}
+	game_begin_phase((MovePhase + 1) & 7);
 }
 
 void game_invoke_playerai(void)
@@ -355,139 +355,148 @@ char	keyRepeatDelay;
 
 void game_input(void)
 {
-	joy_poll(1);
+	byte	pflags = MovePhaseFlags[MovePhase];
 
-	JoystickMenu menu = JM_SELECT;
-
-	if (joybcount)
+	if (pflags & MOVPHASE_INTERACTIVE)
 	{
-		if (joyx[1] | joyy[1])
-		{
-			if (joyx[1] < 0)
-				menu = JM_DONE;
-			else if (joyx[1] > 0)
-				menu = JM_INFO;
-			else if (joyy[1] < 0)
-				menu = JM_UNDO;
-			else
-				menu = JM_MENU;
+		joy_poll(1);
 
-			spr_image(0, 64 + 17 + menu);
-			spr_show(0, true);
-			spr_show(2, true);
+		JoystickMenu menu = JM_SELECT;
+
+		if (joybcount)
+		{
+			if (joyx[1] | joyy[1])
+			{
+				if (joyx[1] < 0)
+					menu = JM_DONE;
+				else if (joyx[1] > 0)
+					menu = JM_INFO;
+				else if (joyy[1] < 0)
+					menu = JM_UNDO;
+				else
+					menu = JM_MENU;
+
+				spr_image(0, 64 + 17 + menu);
+				spr_show(0, true);
+				spr_show(2, true);
+			}
+			else
+			{
+				spr_show(0, false);
+				spr_show(2, false);
+			}
 		}
-		else
+
+		if (joyb[1])
+		{
+			joybcount++;
+		}
+		else if (joybcount)
 		{
 			spr_show(0, false);
 			spr_show(2, false);
+
+			joybcount = 0;
+
+			switch (menu)
+			{
+			case JM_SELECT:
+				game_selecthex();
+				break;
+			case JM_DONE:
+				joyBlockMove = true;
+				game_complete_phase();
+				break;
+			case JM_UNDO:
+				joyBlockMove = true;
+				game_undohex();
+				break;
+			case JM_INFO:
+			case JM_MENU:
+				break;
+			}
 		}
-	}
-
-	if (joyb[1])
-	{
-		joybcount++;
-	}
-	else if (joybcount)
-	{
-		spr_show(0, false);
-		spr_show(2, false);
-
-		joybcount = 0;
-
-		switch (menu)
+		else if (!joyBlockMove)
 		{
-		case JM_SELECT:
-			game_selecthex();
-			break;
-		case JM_DONE:
-			joyBlockMove = true;
-			game_complete_phase();
-			break;
-		case JM_UNDO:
-			joyBlockMove = true;
-			game_undohex();
-			break;
-		case JM_INFO:
-		case JM_MENU:
-			break;
+			cursor_move(4 * joyx[1], 4 * joyy[1])
 		}
-	}
-	else if (!joyBlockMove)
-	{
-		cursor_move(4 * joyx[1], 4 * joyy[1])
-	}
-	else if (!(joyx[1] | joyy[1]))
-	{
-		joyBlockMove = false;
-	}
-
-	keyb_poll();
-
-	if (keyb_key)
-	{
-		keyRepeatDelay = 8;
-
-		switch (keyb_codes[keyb_key & 0x7f])
+		else if (!(joyx[1] | joyy[1]))
 		{
-		case ' ':
-			game_selecthex();
-			break;
-		case KEY_CSR_DOWN:
-			cursor_move(0, 24);
-			break;
-		case KEY_CSR_UP:
-			cursor_move(0, -24);
-			break;
-		case KEY_CSR_LEFT:
-			cursor_move(-24, 12 - 24 * (gridX & 1));
-			break;
-		case KEY_CSR_RIGHT:
-			cursor_move( 24, 12 - 24 * (gridX & 1));
-			break;
-
-		case 'z':
-			game_complete_phase();
-			break;
-
-		case 'w':
-			window_open(4, 4, 13, 8);
-			window_write(0, 0, "HELLO WORLD");
-			window_write(0, 1, "2ND LINE");
-			break;
-
-		case 'a':
-			game_invoke_playerai();
-			break;
-
-		case 'e':
-			window_close();
-			break;
+			joyBlockMove = false;
 		}
-	}
-	else if (keyRepeatDelay == 0)
-	{
-		if (key_pressed(KEY_CODE_CSR_RIGHT))
+
+		keyb_poll();
+
+		if (keyb_key)
 		{
-			if (key_shift())
-				cursor_move(-8, 0);
-			else
-				cursor_move( 8, 0);
-		}
-		else if (key_pressed(KEY_CODE_CSR_DOWN))
-		{
-			if (key_shift())
-				cursor_move(0, -8);
-			else
-				cursor_move(0, 8);
-		}		
-		else
 			keyRepeatDelay = 8;
+
+			switch (keyb_codes[keyb_key & 0x7f])
+			{
+			case ' ':
+				game_selecthex();
+				break;
+			case KEY_CSR_DOWN:
+				cursor_move(0, 24);
+				break;
+			case KEY_CSR_UP:
+				cursor_move(0, -24);
+				break;
+			case KEY_CSR_LEFT:
+				cursor_move(-24, 12 - 24 * (gridX & 1));
+				break;
+			case KEY_CSR_RIGHT:
+				cursor_move( 24, 12 - 24 * (gridX & 1));
+				break;
+
+			case 'z':
+				game_complete_phase();
+				break;
+
+			case 'w':
+				window_open(4, 4, 13, 8);
+				window_write(0, 0, "HELLO WORLD");
+				window_write(0, 1, "2ND LINE");
+				break;
+
+			case 'a':
+				game_invoke_playerai();
+				break;
+
+			case 'e':
+				window_close();
+				break;
+			}
+		}
+		else if (keyRepeatDelay == 0)
+		{
+			if (key_pressed(KEY_CODE_CSR_RIGHT))
+			{
+				if (key_shift())
+					cursor_move(-8, 0);
+				else
+					cursor_move( 8, 0);
+			}
+			else if (key_pressed(KEY_CODE_CSR_DOWN))
+			{
+				if (key_shift())
+					cursor_move(0, -8);
+				else
+					cursor_move(0, 8);
+			}		
+			else
+				keyRepeatDelay = 8;
+		}
+		else
+			keyRepeatDelay--;
+
+		if (gridstate[gridY][gridX] & GS_UNIT)
+			status_update_unit(gridunits[gridY][gridX]);
+		else
+			status_update_unit(SelectedUnit);
 	}
 	else
-		keyRepeatDelay--;
-
-	if (gridstate[gridY][gridX] & GS_UNIT)
-		status_update_unit(gridunits[gridY][gridX]);
-	else
-		status_update_unit(SelectedUnit);
+	{
+		game_complete_phase();
+	}
 }
