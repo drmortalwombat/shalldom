@@ -18,7 +18,7 @@ void battle_add_pair(byte from, byte to)
 
 void battle_cancel_pair(byte from)
 {
-	byte	i;
+	byte	i = 0;
 	while (i < NumBattlePairs && BattlePairs[i].from != from)
 		i++;
 	while (i + 1 < NumBattlePairs)

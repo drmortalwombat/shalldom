@@ -1,4 +1,5 @@
 #include "window.h"
+#include <assert.h>
 
 const byte colorfont[] = {
 
@@ -47,7 +48,6 @@ void window_fill_rect(char x, char y, char w, char h, char pat)
 			wp[j] = pat;
 		wp += 320;
 	}
-
 }
 
 void window_scroll(void)
@@ -221,8 +221,9 @@ void window_open(char x, char y, char w, char h)
 
 void window_close(void)
 {
-	updateColors();
-	drawBaseGrid();
-	updateBaseGrid();
+	grid_redraw_rect(winX - 1, winY - 1, winW + 2, winH + 2)
+
+//	drawBaseGrid();
+//	updateColors();
 }
 

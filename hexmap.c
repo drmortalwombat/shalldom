@@ -50,7 +50,7 @@ void hex_add_path(char unit)
 	gridstate[path->sy][path->sx] |= GS_SELECT;
 	gridstate[path->ey][path->ex] &= ~GS_SELECT;
 
-	while (len < 8 && x != sx || y2 != sy2)
+	while (len < 8 && (x != sx || y2 != sy2))
 	{		
 		char mind = 0, mini = 0;
 		for(char i=0; i<6; i++)

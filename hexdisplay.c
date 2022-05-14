@@ -9,6 +9,7 @@ byte gridunits[32][32];
 
 byte viewstate[8][16];
 byte viewcolor[9][16];
+byte viewunits[8][16];
 
 const char * TerrainNames[6] = 
 {
@@ -394,7 +395,11 @@ void drawUnits(void)
 	for(char i=0; i<numUnits; i++)
 	{
 		char x = units[i].mx, y = units[i].my;
-		gridstate[y][x] |= GS_UNIT;
+		char	f = gridstate[y][x];
+		f |= GS_UNIT;
+		if (units[i].type & UNIT_COMMANDED)
+			f |= GS_GHOST;
+		gridstate[y][x] = f;
 		gridunits[y][x] = i;
 	}
 }
@@ -404,17 +409,32 @@ void moveUnit(byte unit, byte x, byte y)
 	char px = units[unit].mx, py = units[unit].my;
 	units[unit].mx = x; units[unit].my = y;
 
-	gridstate[py][px] &= ~GS_UNIT;
+	gridstate[py][px] &= ~(GS_UNIT | GS_GHOST);
 	gridunits[py][px] = 0xff;
-	gridstate[y][x] |= GS_UNIT;
+	char	f = gridstate[y][x];
+	f |= GS_UNIT;
+	if (units[unit].type & UNIT_COMMANDED)
+		f |= GS_GHOST;
+	gridstate[y][x] = f;
 	gridunits[y][x] = unit;
+
 }
 
+void ghostUnit(byte unit)
+{
+	char px = units[unit].mx, py = units[unit].my;
+	char	f = gridstate[py][px];
+	if (units[unit].type & UNIT_COMMANDED)
+		f |= GS_GHOST;
+	else
+		f &= ~GS_GHOST;
+	gridstate[py][px] = f;	
+}
 
 void hideUnit(byte unit)
 {
 	char px = units[unit].mx, py = units[unit].my;
-	gridstate[py][px] &= ~GS_UNIT;
+	gridstate[py][px] &= ~(GS_UNIT | GS_GHOST);
 	gridunits[py][px] = 0xff;
 }
 
@@ -437,7 +457,6 @@ void scroll(sbyte dx, sbyte dy)
 		ox = tx;
 		oy = ty;
 		updateColors();
-		updateBaseGrid();
 	}
 
 }
@@ -580,6 +599,41 @@ void selectBaseCell(byte cx, byte cy)
 	}
 }
 
+void updateViewCell(char cx, char cy)
+{
+	if (cy < (char)(8 - (cx & 1)))
+	{
+		char gstate = gridstate[cy + oy][cx + ox];
+		char vstate = viewstate[cy][cx];
+		viewstate[cy][cx] = gstate;
+
+		char gunit = gridunits[cy + oy][cx + ox];
+		char vunit = viewunits[cy][cx];
+		viewunits[cy][cx] = gunit;
+
+		bool	changed = (gstate ^ vstate) & GS_FLAGS;
+		if (vunit != gunit)
+			changed = true;
+
+		if (changed)
+		{
+			if (vstate & GS_FLAGS)
+				drawBaseCell(cx, cy);
+
+			if ((gstate & GS_UNIT) && !(gstate & GS_HIDDEN))
+			{
+				overlay(cx, cy, units[gunit].type & UNIT_TYPE, units[gunit].type & UNIT_TEAM ? TeamColors[1] : TeamColors[0]);
+			}
+
+			if (gstate & GS_GHOST)
+				ghostBaseCell(cx, cy);
+			else if (gstate & GS_SELECT)
+				selectBaseCell(cx, cy);					
+		}
+	}
+}
+
+
 void updateColors(void)
 {
 	for(char cy=0; cy<8; cy++)
@@ -609,42 +663,17 @@ void updateColors(void)
 		putcr2(cm, cn, cp);
 		cp += 40;
 	
+		if (y > 0)
+		{
+			for(char cx=0; cx<13; cx++)
+				updateViewCell(cx, y - 1);
+		}
+
 		cm = cn;
 	}
-}
 
-void updateViewCell(char cx, char cy)
-{
-	if (cy < (char)(8 - (cx & 1)))
-	{
-		char gstate = gridstate[cy + oy][cx + ox];
-		char vstate = viewstate[cy][cx];
-
-		viewstate[cy][cx] = gstate;
-
-		bool	changed = (gstate ^ vstate) & GS_FLAGS;
-		if (gstate & GS_UNIT)
-			changed = true;
-
-		if (changed)
-		{
-			if (vstate & GS_FLAGS)
-				drawBaseCell(cx, cy);
-
-			if ((gstate & GS_UNIT) && !(gstate & GS_HIDDEN))
-			{
-				byte gi = gridunits[cy + oy][cx + ox];
-				overlay(cx, cy, units[gi].type & UNIT_TYPE, units[gi].type & UNIT_TEAM ? TeamColors[1] : TeamColors[0]);
-				if (units[gi].type & UNIT_COMMANDED)
-					gstate |= GS_GHOST;
-			}
-
-			if (gstate & GS_GHOST)
-				ghostBaseCell(cx, cy);
-			else if (gstate & GS_SELECT)
-				selectBaseCell(cx, cy);					
-		}
-	}
+	for(char cx=0; cx<13; cx++)
+		updateViewCell(cx, 7);
 }
 
 void updateGridCell(char x, char y)
@@ -666,9 +695,120 @@ void updateBaseGrid(void)
 	}
 }
 
+const char div3[] = {
+	0, 0, 0,
+	1, 1, 1,
+	2, 2, 2,
+	3, 3, 3,
+	4, 4, 4,
+	5, 5, 5,
+	6, 6, 6, 
+	7, 7, 7,
+	8, 8, 8
+};
+
+const char mod6[] = {
+	0, 1, 2, 3, 4, 5,
+	0, 1, 2, 3, 4, 5,
+	0, 1, 2, 3, 4, 5,
+	0, 1, 2, 3, 4, 5,
+	0, 1, 2, 3, 4, 5,
+	0, 1, 2, 3, 4, 5,
+	0, 1, 2, 3, 4, 5,	
+};
+
+void grid_redraw_overlay(char cx, char cy)
+{
+	if (cy < (char)(8 - (cx & 1)))
+	{
+		char gstate = gridstate[cy + oy][cx + ox];
+		viewstate[cy][cx] = gstate;
+
+		char gunit = gridunits[cy + oy][cx + ox];
+		viewunits[cy][cx] = gunit;
+
+		if (gstate & GS_FLAGS)
+			drawBaseCell(cx, cy);
+
+		if ((gstate & GS_UNIT) && !(gstate & GS_HIDDEN))
+			overlay(cx, cy, units[gunit].type & UNIT_TYPE, units[gunit].type & UNIT_TEAM ? TeamColors[1] : TeamColors[0]);
+
+		if (gstate & GS_GHOST)
+			ghostBaseCell(cx, cy);
+		else if (gstate & GS_SELECT)
+			selectBaseCell(cx, cy);					
+	}
+}
+
+void grid_redraw_rect(char x, char y, char w, char h)
+{
+	char gy0 = div3[y], gy1 = div3[y + h + 2];
+
+	byte	*	lp = Hires + 320 * 3 * gy0 + 8 * x;;
+	byte	*	cp = Screen + 40 * 3 * gy0;
+	byte	*	xp = Color + 40 * 3 * gy0 + x;
+	char		xm =  mod6[x];
+
+	const byte * cm = &(viewcolor[gy0][0]);
+
+	for(char y=gy0; y<gy1; y++)
+	{
+		for(char ry=0; ry<3; ry++)
+		{
+			byte	*	dp = lp;
+
+			char rx = xm;
+			const byte * sp = gfield[ry * 6 + rx]
+
+			for(char x=0; x<w; x++)
+			{
+				for(char i=0; i<8; i++)
+					dp[i] = sp[i];
+				xp[x] = 0x01;
+
+				dp += 8;
+				sp += 8;
+
+				rx++;
+				if (rx == 6)
+				{
+					rx = 0;
+					sp -= 48;
+				}
+			}
+
+			lp += 320;
+			xp += 40;
+		}
+
+		const byte * cn = cm + 16;
+
+		putcr0(cm, cn, cp);
+		cp += 40;
+		putcr1(cm, cn, cp);
+		cp += 40;
+		putcr2(cm, cn, cp);
+		cp += 40;
+		cm = cn;
+
+		if (y > gy0)
+		{
+			for(char x=0; x<13; x++)
+				grid_redraw_overlay(x, y - 1);
+		}
+	}
+
+	for(char x=0; x<13; x++)
+		grid_redraw_overlay(x, gy1 - 1);
+}
+
 void drawBaseGrid(void)
 {
-	memset(Color, 1, 1000);
+	grid_redraw_rect(0, 0, 40, 24);
+	return;
+
+	memset(Color, 0x01, 1000);
+	memset(viewunits, 0xff, sizeof(viewunits));
 
 	byte * dp = Hires;
 

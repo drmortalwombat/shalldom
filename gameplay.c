@@ -44,6 +44,7 @@ void game_begin_phase(MovePhases phase)
 		units[i].tx = units[i].mx;
 		units[i].ty = units[i].my;
 		units[i].type &= ~UNIT_COMMANDED;
+		ghostUnit(i);
 	}
 
 	resetFlags();
@@ -54,7 +55,6 @@ void game_begin_phase(MovePhases phase)
 	calcVisibility(team);
 	calcThreatened(team ^ MOVPHASE_TEAM);
 
-	updateColors();
 	updateBaseGrid();
 
 	char	color = TeamColors[team ? 1 : 0];
@@ -163,8 +163,7 @@ void game_swap_moves(void)
 			moveUnit(i, units[i].tx, units[i].ty);
 	}
 
-	updateColors();
-	updateBaseGrid();	
+	updateBaseGrid();
 }
 
 void game_exceute_moves(void)
@@ -295,6 +294,7 @@ void game_selecthex(void)
 			units[SelectedUnit].tx = gridX;
 			units[SelectedUnit].ty = gridY;
 			battle_add_pair(SelectedUnit, gridunits[gridY][gridX]);
+			ghostUnit(SelectedUnit);
 		}
 		else
 		{
@@ -304,7 +304,6 @@ void game_selecthex(void)
 
 		resetMovement();
 
-		updateColors();
 		updateBaseGrid();
 		SelectedUnit = 0xff;
 	}
@@ -329,14 +328,14 @@ void game_undohex(void)
 			units[ui].type &= ~UNIT_COMMANDED;
 			if (pflags & MOVPHASE_ATTACK)
 			{
-				moveUnit(ui, units[ui].tx, units[ui].ty);
 				battle_cancel_pair(ui);
+				ghostUnit(ui);
 			}
 			else
 			{
-				hex_cancel_path(SelectedUnit);				
+				hex_cancel_path(ui);
+				moveUnit(ui, units[ui].tx, units[ui].ty);
 			}
-			updateColors();
 			updateBaseGrid();
 		}
 	}
@@ -359,19 +358,19 @@ void game_input(void)
 
 	if (pflags & MOVPHASE_INTERACTIVE)
 	{
-		joy_poll(1);
+		joy_poll(0);
 
 		JoystickMenu menu = JM_SELECT;
 
 		if (joybcount)
 		{
-			if (joyx[1] | joyy[1])
+			if (joyx[0] | joyy[0])
 			{
-				if (joyx[1] < 0)
+				if (joyx[0] < 0)
 					menu = JM_DONE;
-				else if (joyx[1] > 0)
+				else if (joyx[0] > 0)
 					menu = JM_INFO;
-				else if (joyy[1] < 0)
+				else if (joyy[0] < 0)
 					menu = JM_UNDO;
 				else
 					menu = JM_MENU;
@@ -387,7 +386,7 @@ void game_input(void)
 			}
 		}
 
-		if (joyb[1])
+		if (joyb[0])
 		{
 			joybcount++;
 		}
@@ -418,9 +417,9 @@ void game_input(void)
 		}
 		else if (!joyBlockMove)
 		{
-			cursor_move(4 * joyx[1], 4 * joyy[1])
+			cursor_move(4 * joyx[0], 4 * joyy[0])
 		}
-		else if (!(joyx[1] | joyy[1]))
+		else if (!(joyx[0] | joyy[0]))
 		{
 			joyBlockMove = false;
 		}
@@ -470,14 +469,14 @@ void game_input(void)
 		}
 		else if (keyRepeatDelay == 0)
 		{
-			if (key_pressed(KEY_CODE_CSR_RIGHT))
+			if (key_pressed(KSCAN_CSR_RIGHT))
 			{
 				if (key_shift())
 					cursor_move(-8, 0);
 				else
 					cursor_move( 8, 0);
 			}
-			else if (key_pressed(KEY_CODE_CSR_DOWN))
+			else if (key_pressed(KSCAN_CSR_DOWN))
 			{
 				if (key_shift())
 					cursor_move(0, -8);

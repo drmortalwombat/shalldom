@@ -15,7 +15,7 @@
 #include "status.h"
 
 #pragma region(main, 0x0a00, 0xc800, , , {code, data, bss, heap, stack} )
-
+/*
 unsigned srand(unsigned * seed)
 {
 	unsigned s = *seed;
@@ -27,7 +27,7 @@ unsigned srand(unsigned * seed)
 	*seed = s;
 	return s;
 }
-
+*/
 
 void buildterrain(unsigned seed)
 {
@@ -171,7 +171,6 @@ int main(void)
 	calcThreatened(UNIT_TEAM_2);
 
 	updateColors();
-	updateBaseGrid();
 
 	game_init();
 	game_begin_phase(MP_MOVE_2);
