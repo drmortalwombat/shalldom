@@ -20,8 +20,34 @@ void dbglogi(int i)
 	dbglog(buffer);
 }
 
+AITask	*	AITasks;
 
-int playerai_eval_move(byte unit, byte gx, byte gy)
+unsigned tsqrt(unsigned n)
+{
+    unsigned p, q, r, h
+
+    p = 0;
+    r = n;
+
+#assign q 0x4000
+#repeat
+    {
+        h = p | q;
+        p >>= 1;
+        if (r >= h)
+        {
+            p |= q;
+            r -= h;
+        } 
+    }
+#assign q q >> 2
+#until q == 0
+#undef q
+
+    return p;
+}
+
+int playerai_eval_move(byte unit, byte gx, byte gy, const AITask * task)
 {
 	Unit	*	ua = units + unit;
 	byte		team = ua->type & UNIT_TEAM;
@@ -33,6 +59,29 @@ int playerai_eval_move(byte unit, byte gx, byte gy)
 	ua->mx = gx;
 	ua->my = gy;
 
+	byte	terrain = gridstate[gy][gx] & GS_TERRAIN;
+
+	value += ground_agility[terrain] * 16;
+
+	if (UnitInfos[ua->type & UNIT_TYPE].armour & UNIT_INFO_DIG_IN)
+	{
+		if (ux == gx && uy == gy)
+			value += 120;
+	}
+
+	AIStrategy	ais = task->strategy & AI_STRATEGY;
+
+	unsigned dd = hex_dist_square(gx, gy, task->mx, task->my);
+
+	int	attscore = 100, defscore = -50;
+
+	switch (ais)
+	{
+	case AIS_RUSH:
+		value += 4096 - tsqrt(dd) * 32;
+		attscore = 20;
+		break;
+	}
 
 	for(byte j=0; j<numUnits; j++)
 	{
@@ -43,9 +92,9 @@ int playerai_eval_move(byte unit, byte gx, byte gy)
 			if (!(gridstate[ty][tx] & GS_HIDDEN))
 			{
 				if (unit_can_attack(unit, j))
-					value += 100;
+					value += attscore;
 				if (unit_can_attack(j, unit))
-					value -= 50;
+					value += defscore;
 			}
 		}
 	}
@@ -55,19 +104,55 @@ int playerai_eval_move(byte unit, byte gx, byte gy)
 	return value;
 }
 
+void playerai_advance(byte team)
+{
+	for(byte i=0; i<numUnits; i++)
+	{			
+		Unit	*	ua = units + i;
+		if ((ua->type & (UNIT_TEAM | UNIT_COMMANDED)) == team)
+		{
+			const AITask	*	task = AITasks + (ua->id >> 3);
+
+			AIStrategy	ais = task->strategy & AI_STRATEGY;
+			sbyte		dx = task->mx - ua->mx, dy = task->my - ua->my;
+
+			if (dx < 0) dx = -dx;
+			if (dy < 0) dy = -dy;
+			byte	dd = dx;
+			if (dy > dx)
+				dd = dy;
+
+			bool	advance = false;
+			switch (ais)
+			{
+			case AIS_RUSH:
+				if (dd <= 1)
+					advance = true;
+				break;
+			}
+
+			if (advance)
+				ua->id = (ua->id & UNIT_ID_DIVISION) | (task->strategy & AI_TASK_ID);
+		}
+	}
+}
+
 void playerai_select_move(byte team)
 {
+
 	for(byte r=0; r<2; r++)
 	{
 		for(byte i=0; i<numUnits; i++)
-		{
+		{			
 			Unit	*	ua = units + i;
 			if ((ua->type & (UNIT_TEAM | UNIT_COMMANDED)) == team)
 			{
+				const AITask	*	task = AITasks + (ua->id >> 3);
+
 				calcMovement(i);
 
 				byte	maxx = ua->mx, maxy = ua->my;
-				int		maxv = playerai_eval_move(i, maxx, maxy) + 10;
+				int		maxv = playerai_eval_move(i, maxx, maxy, task) + 10;
 
 				for(char y=0; y<32; y++)
 				{
@@ -75,7 +160,7 @@ void playerai_select_move(byte team)
 					{
 						if (gridstate[y][x] & GS_SELECT)
 						{
-							int	value = playerai_eval_move(i, x, y);
+							int	value = playerai_eval_move(i, x, y, task);
 							if (value > maxv)
 							{
 								maxx = x;
@@ -92,6 +177,11 @@ void playerai_select_move(byte team)
 					ua->type |= UNIT_COMMANDED;
 
 					hex_add_path(i);
+				}
+				else
+				{
+					ua->type |= UNIT_COMMANDED;
+					ua->flags |= UNIT_FLAG_REPAIR;
 				}
 
 				resetMovement();
@@ -112,6 +202,8 @@ void playerai_select_battles(byte team)
 		Unit	*	ua = units + i;
 		if ((ua->type & UNIT_TEAM) == team)
 		{
+			ua->flags |= UNIT_FLAG_REPAIR;
+
 			UnitInfo	*	info = UnitInfos + (ua->type & UNIT_TYPE);
 
 			for(byte j=0; j<numUnits; j++)
@@ -119,8 +211,7 @@ void playerai_select_battles(byte team)
 				Unit	*	ud = units + j;
 				if ((ud->type & UNIT_TEAM) != team)
 				{
-					sbyte tx = ud->mx, ty = ud->my;
-					if (!(gridstate[ty][tx] & GS_HIDDEN))
+					if (!(gridstate[ud->my][ud->mx] & GS_HIDDEN))
 					{
 						int	value = unit_attack_value(i, j);
 
@@ -158,6 +249,8 @@ void playerai_select_battles(byte team)
 		BattlePairs[maxp] = BattlePairs[NumBattlePairs];
 		BattlePairs[NumBattlePairs] = p;
 		NumBattlePairs++;
+
+		units[p.from].flags &= ~UNIT_FLAG_REPAIR;
 
 		char	np = NumBattlePairs;
 		for(char i=NumBattlePairs; i<battlePairs; i++)

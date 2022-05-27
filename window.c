@@ -87,6 +87,25 @@ void window_write(char x, char y, const char * text)
 	}
 }
 
+static char cpad[] = {0x00, 0x55, 0xaa, 0xff};
+
+void window_draw_vbar(char x, char y, char h, char c)
+{
+	char	*	wp = winP + (8 * (40 * (y >> 3) + (x >> 2)) | (y & 7));
+
+	char and = 0xc0 >> (2 * (x & 3));
+	char or = cpad[c] & and;
+	and = ~and;
+
+	for(char iy=0; iy<h; iy++)
+	{
+		*wp = (*wp & and) | or;
+		wp++;
+		if (!((unsigned)wp & 7))
+			wp += 312;
+	}
+}
+
 void window_put_sprite(char x, char y, const char * sprite)
 {
 	char	*	wp = winP + (8 * (40 * (y >> 3) + x) | (y & 7));

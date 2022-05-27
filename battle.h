@@ -3,11 +3,20 @@
 
 #include "units.h"
 
+enum Combatand
+{
+	CBT_ATTACKER,
+	CBT_DEFENDER,
+	CBT_COUNT
+};
+
 // Slot 0 is attacker, slot 1 is defender
 struct Battle
 {
 	byte	units[2];
 	byte	damage[2];
+	byte	agility[2];
+	byte	accuracy[2];
 	byte	health[2][5];
 	byte	shots[64];
 	byte	numShots, firedShots;
@@ -26,6 +35,8 @@ struct BattlePair
 
 extern BattlePair	BattlePairs[64];
 extern byte			NumBattlePairs;
+extern byte			ground_agility[8];
+
 
 
 
@@ -41,7 +52,7 @@ void battle_init(Battle * b, byte dunit);
 // Add attacker to battle
 void battle_begin_attack(Battle * b, byte aunit);
 
-void battle_enter_units(Battle * b, byte t, byte phase);
+void battle_enter_units(Battle * b, Combatand t, byte phase);
 
 // Complete battle with attacker
 void battle_complete_attack(Battle * b);

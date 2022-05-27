@@ -73,9 +73,13 @@ void updateBaseGrid(void);
 
 void updateGridCell(char x, char y);
 
+void grid_redraw_colors(void);
+
 void grid_redraw_rect(char x, char y, char w, char h);
 
 void grid_redraw_overlay(char x, char y);
+
+void grid_blank(void);
 
 #pragma compile("hexdisplay.c")
 

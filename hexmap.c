@@ -71,7 +71,11 @@ void hex_add_path(char unit)
 		x += PathX[mini]; y2 += PathY[mini];
 		len++;
 	}
-	path->len = len;
+	while (len < 8)
+	{
+		path->steps[len] = 0xff;
+		len++;
+	}
 
 	NumPaths++;
 }
@@ -81,7 +85,7 @@ void hex_cancel_path(char unit)
 	Unit	*	u = units + unit
 
 	char	i = 0;
-	while (i < NumPaths && (Paths[i].sx != u->mx || Paths[i].sy != u->my))
+	while (i < NumPaths && (Paths[i].sx != u->tx || Paths[i].sy != u->ty))
 		i++;
 	if (i < NumPaths)
 	{

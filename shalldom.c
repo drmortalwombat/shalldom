@@ -7,139 +7,165 @@
 #include <c64/joystick.h>
 #include <c64/keyboard.h>
 #include <c64/rasterirq.h>
+#include <c64/memmap.h>
+#include <c64/sid.h>
 #include "perlin.h"
 #include "hexdisplay.h"
 #include "cursor.h"
 #include "gameplay.h"
 #include "units.h"
 #include "status.h"
+#include "terrain.h"
+#include "playerai.h"
+#include "splitscreen.h"
+#include "textoverlay.h"
+#include "levels.h"
+#include <audio/sidfx.h>
 
-#pragma region(main, 0x0a00, 0xc800, , , {code, data, bss, heap, stack} )
-/*
-unsigned srand(unsigned * seed)
-{
-	unsigned s = *seed;
+#pragma region(main, 0x0a00, 0xa000, , , {code, data, bss, heap, stack} )
 
-	s ^= s << 7;
-    s ^= s >> 9;
-    s ^= s << 8;
+#pragma section( music, 0)
 
-	*seed = s;
-	return s;
+#pragma region( music, 0xa000, 0xc000, , , {music} )
+
+#pragma data(music)
+
+__export char music[] = {
+	#embed 0x2000 0x88 "ArmyGame.sid" 
 }
-*/
 
-void buildterrain(unsigned seed)
+// 00 - Game theme neutral
+// 01 - Results
+// 02 - Game theme Enemy winning
+
+#pragma data(data)
+
+void music_init(char tune)
 {
-	mnoise_init(seed);
-
-	for(byte iy=0; iy<32; iy++)
+	__asm
 	{
-		for(byte ix=0; ix<32; ix++)
-		{
-			int f = mnoise2(ix * 32, (2 * iy + (ix & 1)) * 16, 3, 120);
-
-			if (f < -5000)
-				gridstate[iy][ix] = GTERRAIN_SEA;
-			else if (f < 0)
-				gridstate[iy][ix] = GTERRAIN_WATER;
-			else if (f < 5000)
-				gridstate[iy][ix] = GTERRAIN_BEACH;
-			else if (f < 15000)
-				gridstate[iy][ix] = GTERRAIN_FORREST;
-			else
-				gridstate[iy][ix] = GTERRAIN_MOUNTAIN;
-		}
+		lda		tune
+		jsr		$a000
 	}
 }
 
-void paveRoad(char px, char py, sbyte dx, sbyte dy, byte s)
+void music_play(void)
 {
-	for(char i=0; i<s; i++)
+	__asm
 	{
-		char ix = px;
-		char iy = (py + 1 - (px & 1)) >> 1;
-
-		gridstate[iy][ix] = GTERRAIN_ROAD;
-		px += dx;
-		py += dy;
+		jsr		$a003
 	}
 }
 
-RIRQCode	rirqtop, rirqbottom;
+void music_patch_voice3(bool enable)
+{
+	*(char *)0xa08f = enable ? 0x20 : 0x4c;
+}
 
-#pragma align(rirqbottom, 16)
+AITask	aitasks[] = {
+	{AIS_IDLE + 0 * 8,  0,  0, 0},
+	{AIS_RUSH + 0 * 8,  3, 15, 0},
+	{AIS_RUSH + 1 * 8, 17,  9, 0},
+	{AIS_RUSH + 1 * 8, 11, 22, 0},
+}
 
 int main(void)
 {
+	cia_init();
+
+	__asm { sei }
+
 	// Turn basic ROM off
 	
-	*(char *)0x01 = 0x36;
-
-	buildterrain(23142);
-
-	paveRoad( 4,  4,   1,  1, 10);
-	paveRoad(14, 14,  0,  2,  6);
-	paveRoad(10, 10, -1,  1,  8);
-	paveRoad(20, 20,  0, -2, 10);
-
-	__asm
-	{
-		sei
-	}
-
-	cia1.icr = 0x1f;
-	cia2.icr = 0x1f;
+	mmap_set(MMAP_NO_ROM);
 
 	initDisplay();
 
-	rirq_init(false);
-
-	vic.ctrl1 = VIC_CTRL1_BMM | VIC_CTRL1_DEN | VIC_CTRL1_RSEL | 3;
-	vic.ctrl2 = VIC_CTRL2_MCM | VIC_CTRL2_CSEL;
-	
-	vic.color_back = VCOL_BLACK;
-
-	vic_setbank(3);
-	vic.memptr = 0x28;
-
-	rirq_build(&rirqtop, 3);    
-	rirq_write(&rirqtop, 0, &vic.ctrl2, VIC_CTRL2_MCM | VIC_CTRL2_CSEL);
-	rirq_write(&rirqtop, 1, &vic.memptr, 0x28);
-	rirq_write(&rirqtop, 2, &vic.ctrl1, VIC_CTRL1_BMM | VIC_CTRL1_DEN | VIC_CTRL1_RSEL | 3);
-
-	rirq_build(&rirqbottom, 4); 
-	rirq_delay(&rirqbottom, 10);
-	rirq_write(&rirqbottom, 1, &vic.memptr, 0x27);
-	rirq_write(&rirqbottom, 2, &vic.ctrl1, VIC_CTRL1_DEN | VIC_CTRL1_RSEL | 3);
-	rirq_write(&rirqbottom, 3, &vic.ctrl2, VIC_CTRL2_CSEL);
-
-	rirq_set(0, 10,          &rirqtop);
-	rirq_set(1, 49 + 8 * 24, &rirqbottom);
-	rirq_sort();
-
-	rirq_start();
-
-	vic.spr_enable = 0x02;
-	vic.spr_expand_x = 0x06;
-	vic.spr_expand_y = 0x06;
-	vic.spr_multi = 0x01;
-	vic.spr_color[0] = VCOL_RED;
-	vic.spr_color[1] = VCOL_WHITE;
-	vic.spr_color[2] = VCOL_MED_GREY;
-	vic.spr_mcolor0 = VCOL_BLACK;
-	vic.spr_mcolor1 = VCOL_WHITE;
-
-	Screen[0x03f8] = 64 + 18;
-
-	Screen[0x03f9] = 64 + 16;
-	Screen[0x03fa] = 64 + 17;
+	grid_blank();
 
 	drawBaseGrid();
+	status_init();
 
+	music_patch_voice3(false);
+	
+	split_init();
+
+	sid.fmodevol = 0x0f;
+
+	level_setup(0);
+
+#if 0
+	tovl_show("PREPARE\nTERRAIN\nDATA\n", VCOL_YELLOW);
+
+
+	AITasks	=	aitasks;
+
+	terrain_build(23893);
+	terrain_pave_road( 4, 16,  1, -1, 13);
+	terrain_pave_road(17,  9,  1,  1,  1);
+	terrain_pave_road(18, 10,  0,  2,  1);
+	terrain_pave_road(18, 11,  1,  1,  3);
+	terrain_pave_road(21, 12,  1, -1,  5);
+	drawBaseGrid();
+
+	unit_add(UNIT_COMMAND | UNIT_TEAM_1,  3, 15, 0);
+	unit_add(UNIT_COMMAND | UNIT_TEAM_2, 29, 16, 0);
+
+	unit_add(UNIT_HEAVY_TANK | UNIT_TEAM_1,  4, 15, 0);
+	unit_add(UNIT_HEAVY_TANK | UNIT_TEAM_1,  4, 16, 1);
+
+	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_1,  5, 14, 0);
+	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_1,  5, 15, 1);
+	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_1,  5, 16, 2);
+
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_1,  6, 13, 0);
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_1,  6, 14, 1);
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_1,  7, 13, 2);
+
+	unit_add(UNIT_HEAVY_TANK | UNIT_TEAM_2, 18, 11, 0);
+	unit_add(UNIT_HEAVY_TANK | UNIT_TEAM_2, 17, 13, 1);
+
+	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_2, 13, 19, 0 + 8 * 3);
+	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_2,  8, 10, 1 + 8 * 1);	
+	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_2, 22, 14, 2 + 8 * 2);
+
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_2, 29, 14, 0);
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_2, 29, 15, 1);
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_2, 17, 10, 2);
+#endif
+
+#if 0
 #if 0
 	unit_add(UNIT_CHOPPER | UNIT_TEAM_1, 3, 5, 0);
 	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_2, 3, 3, 0);
+#elif 0
+	unit_add(UNIT_HOVERCRAFT | UNIT_TEAM_1, 3, 4, 0);
+	unit_add(UNIT_COMMAND | UNIT_TEAM_2, 28, 6, 0);
+#elif 1
+	unit_add(UNIT_AIR_DEFENCE | UNIT_TEAM_1, 3, 5, 0);
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_1, 10, 1, 0);
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_1, 10, 9, 1);
+	unit_add(UNIT_CHOPPER | UNIT_TEAM_2, 11, 6, 0);
+	unit_add(UNIT_CHOPPER | UNIT_TEAM_2, 11, 5, 1);
+	unit_add(UNIT_BOMBER | UNIT_TEAM_2, 11, 10, 0);
+#elif 1
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_1, 10, 1, 0);
+	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_1, 9, 2, 0);
+	unit_add(UNIT_HEAVY_TANK | UNIT_TEAM_2, 10, 2, 0);
+	unit_add(UNIT_ARTILLERY | UNIT_TEAM_1, 3, 5, 0);
+	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_2, 11, 6, 0);
+	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_2, 11, 5, 0);
+#elif 1
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_1, 10, 1, 0);
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_1, 10, 2, 0);
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_1, 9, 2, 0);
+	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_2,  9, 1, 0);
+#elif 1
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_1, 10, 1, 0);
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_2,  9, 1, 0);
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_2, 10, 2, 0);
+	unit_add(UNIT_INFANTRY | UNIT_TEAM_2, 11, 1, 0);
+
 #elif 1
 	unit_add(UNIT_ARTILLERY | UNIT_TEAM_1, 4, 4, 0);
 	unit_add(UNIT_CHOPPER | UNIT_TEAM_1, 10, 3, 0);
@@ -149,6 +175,9 @@ int main(void)
 
 	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_2, 3, 3, 0);
 	unit_add(UNIT_LIGHT_TANK | UNIT_TEAM_2, 3, 4, 1);
+
+	unit_add(UNIT_FLAG | UNIT_TEAM_1, 1, 1, 0);
+	unit_add(UNIT_FLAG | UNIT_TEAM_2, 10, 1, 0);
 
 #else
 	numUnits = 16;
@@ -161,9 +190,13 @@ int main(void)
 		units[i].count = 5;
 	}
 #endif
+#endif
 
-	cursor_init();
-	status_init();
+#if 0
+	tovl_hide();
+	tovl_wait();
+
+	cursor_init(3, 15);
 
 	drawUnits();
 	resetFlags();
@@ -171,16 +204,16 @@ int main(void)
 	calcThreatened(UNIT_TEAM_2);
 
 	updateColors();
+#endif
 
 	game_init();
-	game_begin_phase(MP_MOVE_2);
 
 	for(;;)
 	{
 		while (vic.ctrl1 & VIC_CTRL1_RST8) ;
 		while (!(vic.ctrl1 & VIC_CTRL1_RST8)) ;
 
-		game_input();
+		game_loop();
 	}
 
 	return 0;

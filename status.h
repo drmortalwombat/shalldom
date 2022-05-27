@@ -15,6 +15,7 @@ void status_update_state(const char * state, byte color);
 
 void status_update_unit(char unit);
 
+void status_show_progress(const char * action, byte progress);
 
 
 #pragma compile("status.c")

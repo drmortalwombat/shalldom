@@ -23,9 +23,10 @@
 //	AAAA	: Damage to air objects
 //	GGGG	: Damage to ground objects
 //
-// .armour	: AAAAGGGG
+// .armour	: AAAADGGG
 //	AAAA	: Defensive armour
-//	GGGG	: Agility
+//  D		: Digging in, improve agility if not moved
+//	GGG  	: Agility
 //
 // .shots	: NNNNAAAA
 //	NNNN	: Number of shots per unit
@@ -34,60 +35,67 @@
 
 
 
-struct UnitInfo		UnitInfos[8] = {
+struct UnitInfo		UnitInfos[9] = {
 	{
 		0x04, 0x01,
-		{127, 24, 12, 12, 24, 127},
-		"INFANTRY",
-		0x22, 0x28, 0x44
+		{127, 24, 16, 16, 48, 127},
+		S"INFANTRY",
+		0x22, 0x2f, 0x4a
 	},
 	{
 		0x05, 0x01,
 		{127, 24, 12, 6, 127, 127},
-		"LIGHT TANK",
-		0x06, 0x84, 0x16
+		S"LIGHT TANK",
+		0x06, 0x82, 0x18
 	},
 	{
 		0x86, 0x82,
 		{8, 8, 8, 8, 8, 8},
-		"AIR CAVALRY",
-		0x44, 0x48, 0x62
+		S"AIR CAVALRY",
+		0x44, 0x45, 0x61
 	},
 	{
 		0x04, 0x01,
-		{127, 127, 48, 12, 127, 127},
-		"HEAVY TANK",
-		0x0a, 0xc1, 0x18
+		{127, 127, 48, 16, 127, 127},
+		S"HEAVY TANK",
+		0x1a, 0xc1, 0x15
 	},
 	{
-		0x05, 0x04,
-		{127, 127, 24, 12, 6, 127},
-		"AIR DEFENCE",
-		0x82, 0x44, 0x6c
+		0x05, 0x8b,
+		{127, 127, 24, 12, 127, 127},
+		S"AIR DEFENCE",
+		0x80, 0x44, 0x2c
 	},
 	{
 		0x88, 0x81,
 		{8, 8, 8, 8, 8, 8},
-		"BOMBER SQUAD",
+		S"BOMBER SQUAD",
 		0x0f, 0x82, 0x12
 	},
 	{
 		0x05, 0x02,
-		{24, 24, 24, 24, 127, 127},
-		"HOVERCRAFT",
-		0x26, 0x38, 0x42
+		{16, 16, 16, 16, 127, 127},
+		S"HOVERCRAFT",
+		0x26, 0x35, 0x42
 	},
 	{
 		0x04, 0xea,
-		{127, 127, 8, 24, 8, 127},
-		"ARTILLERY",
+		{127, 127, 24, 16, 127, 127},
+		S"ARTILLERY",
 		0x0e, 0x60, 0x1e
+	},
+	{
+		0x02, 0x00,
+		{127, 127, 127, 127, 127, 127},
+		S"COMMAND",
+		0x00, 0x60, 0x00
 	}
 };
 
 Unit	units[32];
 byte	numUnits;
 
+#pragma align(units, 256)
 
 unsigned unit_distance_square(byte ua, byte ub)
 {

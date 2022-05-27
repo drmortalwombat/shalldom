@@ -11,6 +11,7 @@
 #define UNIT_BOMBER			5
 #define UNIT_HOVERCRAFT		6
 #define UNIT_ARTILLERY		7
+#define UNIT_COMMAND		8
 
 #define UNIT_INFO_RANGE		0x0f
 #define UNIT_INFO_AIRBORNE	0x80
@@ -23,7 +24,8 @@
 #define UNIT_INFO_DMG_AIR		0xf0
 #define UNIT_INFO_DMG_GROUND	0x0f
 #define UNIT_INFO_ARMOUR		0xf0
-#define UNIT_INFO_AGILITY		0x0f
+#define UNIT_INFO_AGILITY		0x07
+#define UNIT_INFO_DIG_IN		0x08
 #define UNIT_INFO_SHOTS			0xf0
 #define UNIT_INFO_ACCURACY		0x0f
 
@@ -36,7 +38,7 @@ struct UnitInfo
 	byte			damage, armour, shots, pad;
 };
 
-extern struct UnitInfo		UnitInfos[8];
+extern struct UnitInfo		UnitInfos[9];
 
 struct Unit
 {
@@ -48,17 +50,19 @@ extern Unit	units[32];
 extern byte numUnits;
 
 
-#define UNIT_TYPE			0x1f
-#define UNIT_TEAM			0x80
-#define UNIT_COMMANDED		0x40
+#define UNIT_TYPE				0x1f
+#define UNIT_TEAM				0x80
+#define UNIT_COMMANDED			0x40
 
-#define UNIT_FLAG_RESTED	0x01
-#define UNIT_FLAG_REPAIR	0x02
+#define UNIT_FLAG_RESTED		0x01
+#define UNIT_FLAG_REPAIR		0x02
+#define UNIT_FLAG_EXPERIENCE	0xe0
 
-#define UNIT_ID_DIVISION	0x07
+#define UNIT_ID_DIVISION		0x07
+#define UINT_ID_AI_TASK			0xf8
 
-#define UNIT_TEAM_1			0x00
-#define UNIT_TEAM_2			0x80
+#define UNIT_TEAM_1				0x00
+#define UNIT_TEAM_2				0x80
 
 unsigned unit_distance_square(byte ua, byte ub);
 

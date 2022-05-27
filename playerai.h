@@ -3,6 +3,24 @@
 
 #include <c64/types.h>
 
+enum AIStrategy
+{
+	AIS_IDLE,
+	AIS_RUSH
+};
+
+struct AITask
+{
+	byte	strategy, mx, my, timeout;
+};
+
+#define AI_STRATEGY		0x07
+#define AI_TASK_ID		0xf8
+
+extern AITask	*	AITasks;
+
+void playerai_advance(byte team);
+
 void playerai_select_move(byte team);
 
 void playerai_select_battles(byte team);

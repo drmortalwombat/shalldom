@@ -14,7 +14,7 @@ inline unsigned hex_size_square(byte sz);
 
 struct Path
 {
-	byte	sx, sy, ex, ey, len;
+	byte	sx, sy, ex, ey;
 	byte	steps[8];
 };
 

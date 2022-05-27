@@ -19,6 +19,15 @@ enum MovePhases
 	MP_MOVING_1
 };
 
+enum GamePhases
+{
+	GP_INIT,
+	GP_PLAYING,
+	GP_VICTORY,
+	GP_LOST
+};
+
+
 #define MOVPHASE_PLAYER			0x01
 #define MOVPHASE_INTERACTIVE	0x02
 #define MOVPHASE_ATTACK			0x04
@@ -28,15 +37,13 @@ extern const byte MovePhaseFlags[8];
 
 extern MovePhases MovePhase;
 
+extern GamePhases GamePhase;
+
 extern const char * PhaseNames[8];
 
 void game_init(void);
 
-void game_input(void);
-
-void game_begin_phase(MovePhases phase);
-
-void game_complete_phase(void);
+void game_loop(void);
 
 #pragma compile("gameplay.c")
 

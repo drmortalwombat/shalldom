@@ -1,4 +1,5 @@
 #include "status.h"
+#include <c64/vic.h>
 
 void status_put_number(char pos, char val)
 {
@@ -26,7 +27,44 @@ void status_put_number(char pos, char val)
 void status_init(void)
 {
 	memset(Screen + 24 * 40, ' ', 40);
+	memset(Color + 24 * 40, VCOL_LT_GREY, 40);
 }
+
+void status_show_progress(const char * action, byte progress)
+{
+	char i, p;
+
+	i = 0;
+	while (action[i])
+	{
+		Screen[24 * 40 + i] = action[i];
+		Color[24 * 40 + i] = VCOL_WHITE;
+		i++;
+	}
+
+	while (i < 8)
+	{
+		Screen[24 * 40 + i] = ' ';
+		i++;
+	}
+
+	p = 0;
+	while (p < progress)
+	{
+		Screen[24 * 40 + i] = 0x2a;
+		Color[24 * 40 + i] = VCOL_YELLOW;
+		p++;
+		i++;		
+	}
+
+	while (i < 40)
+	{
+		Screen[24 * 40 + i] = 0x2a;
+		Color[24 * 40 + i] = VCOL_BLUE;
+		i++;
+	}
+}
+
 
 void status_update_pos(char x, char y)
 {
@@ -36,7 +74,7 @@ void status_update_pos(char x, char y)
 	char type = gridstate[y][x];
 
 	char i = 0;
-	const char * tp = "UNKNOWN"
+	const char * tp = S"UNKNOWN"
 	if (!(type & GS_HIDDEN))
 		tp = TerrainNames[type & GS_TERRAIN];
 
@@ -73,7 +111,7 @@ void status_update_state(const char * state, byte color)
 		Color[24 * 40 + STATE_COL + i] = color;
 }
 
-const char nthnames[] = "STNDRDTHTH";
+const char nthnames[] = S"STNDRDTHTH";
 
 void status_update_unit(char unit)
 {
@@ -82,17 +120,19 @@ void status_update_unit(char unit)
 		char division = units[unit].id & UNIT_ID_DIVISION;
 
 		Screen[24 * 40 + UNIT_COL + 0] = '1' + division;
-		Screen[24 * 40 + UNIT_COL + 1] = nthnames[division * 2 + 0];
-		Screen[24 * 40 + UNIT_COL + 2] = nthnames[division * 2 + 1];
+		if (division > 4)
+			division = 4;
+		Screen[24 * 40 + UNIT_COL + 1] = 0x3c + division;
 		const char * tp = UnitInfos[units[unit].type & UNIT_TYPE].name;
 		char i = 0;
 		while (tp[i])
 		{
-			Screen[24 * 40 + UNIT_COL + 4 + i] = tp[i];
+			Screen[24 * 40 + UNIT_COL + 3 + i] = tp[i];
 			i++;
 		}
-		Screen[24 * 40 + UNIT_COL + 4 + i] = ' ';
-		Screen[24 * 40 + UNIT_COL + 5 + i] = '0' + units[unit].count;
+		Screen[24 * 40 + UNIT_COL + 3 + i] = ' ';
+		Screen[24 * 40 + UNIT_COL + 4 + i] = '0' + units[unit].count;
+		Screen[24 * 40 + UNIT_COL + 5 + i] = 0x1b + ((units[unit].flags & UNIT_FLAG_EXPERIENCE) >> 5);
 
 		while (i < 12)
 		{

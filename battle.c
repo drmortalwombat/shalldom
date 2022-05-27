@@ -1,6 +1,7 @@
 #include "battle.h"
 #include "window.h"
 #include <c64/sprites.h>
+#include <audio/sidfx.h>
 #include "hexdisplay.h"
 
 
@@ -8,6 +9,51 @@ BattlePair	BattlePairs[64];
 byte		NumBattlePairs;
 byte		Explosion;
 
+
+SIDFX	SIDFXExplosion[1] = {{
+	1000, 1000, 
+	SID_CTRL_GATE | SID_CTRL_NOISE,
+	SID_ATK_2 | SID_DKY_6,
+	0xf0  | SID_DKY_1500,
+	-20, 0,
+	8, 40,
+	5
+}};
+
+SIDFX	SIDFXShot[1] = {{
+	1400, 2048, 
+	SID_CTRL_GATE | SID_CTRL_RECT,
+	SID_ATK_2 | SID_DKY_6,
+	0x20  | SID_DKY_204,
+	0, 0,
+	1, 10,
+	1
+}};
+
+SIDFX	SIDFXHit[1] = {{
+	2000, 1000, 
+	SID_CTRL_GATE | SID_CTRL_NOISE,
+	SID_ATK_2 | SID_DKY_6,
+	0x70  | SID_DKY_300,
+	-100, 0,
+	2, 10,
+	2
+}};
+
+void sidfx_play_explosion(void)
+{
+	sidfx_play(2, SIDFXExplosion, 1);	
+}
+
+void sidfx_play_shot(void)
+{
+	sidfx_play(2, SIDFXShot, 1);	
+}
+
+void sidfx_play_hit(void)
+{
+	sidfx_play(2, SIDFXHit, 1);	
+}
 
 void battle_add_pair(byte from, byte to)
 {
@@ -29,10 +75,8 @@ void battle_cancel_pair(byte from)
 	NumBattlePairs = i;
 }
 
-char battle_num_units(Battle * b, byte t)
+char battle_num_units(Battle * b, Combatand t)
 {
-	__assume (t < 2);
-
 	Unit		*	u = units + b->units[t];
 	byte			nu = 0;
 
@@ -43,12 +87,12 @@ char battle_num_units(Battle * b, byte t)
 	return nu;
 }
 
-void battle_init_health(Battle * b, byte t)
+void battle_init_health(Battle * b, Combatand t)
 {
 	Unit		*	u = units + b->units[t];
 	UnitInfo	*	ui = UnitInfos + (u->type & UNIT_TYPE);
 	byte			nu = u->count;
-	byte			health = (ui->armour & UNIT_INFO_ARMOUR) >> 2;
+	byte			health = (ui->armour & UNIT_INFO_ARMOUR) >> 3;
 
 	for(byte i=0; i<nu; i++)
 		b->health[t][i] = health;
@@ -56,12 +100,30 @@ void battle_init_health(Battle * b, byte t)
 		b->health[t][i] = 0;
 }
 
+void battle_draw_health(Battle * b, Combatand t, byte i)
+{
+	char	h = b->health[t][i] >> 1;
+	char	x = 8 + 36 * t;
+	char	y = 4 + 24 * i;
+
+	window_draw_vbar(x, y, 16 - h, 0);
+	window_draw_vbar(x, y + 16 - h, h, 3);
+}
+
+char ground_agility[8] = 
+{
+	1, 1, 2, 1, 4, 7
+};
+
 void battle_init_shots(Battle * b)
 {
 	unsigned	dist = unit_distance_square(b->units[0], b->units[1]);
 
+	for(char i=0; i<64; i++)
+		b->shots[i] = 0xbb;
+
 	byte	si = 0;
-	for(byte t=0; t<2; t++)
+	for(Combatand t=0; t<CBT_COUNT; t++)
 	{
 		Unit		*	u = units + b->units[t];
 		UnitInfo	*	ui = UnitInfos + (u->type & UNIT_TYPE);
@@ -74,7 +136,17 @@ void battle_init_shots(Battle * b)
 		unsigned	maxr = hex_size_square(ui->range & UNIT_INFO_SHOT_RANGE);
 		unsigned	minr = hex_size_square(ui->range & UNIT_INFO_SHOT_MIN ? 2 : 1);
 
-		if (dist >= minr && dist <= maxr)
+		byte			uexp = ((u->flags & UNIT_FLAG_EXPERIENCE) >> 5) + 2;
+		if ((ui->armour & UNIT_INFO_DIG_IN) && (u->flags & UNIT_FLAG_RESTED))
+			uexp *= 2;
+
+		b->agility[t] = ((ui->armour & UNIT_INFO_AGILITY) + ground_agility[gridstate[u->my][u->mx] & GS_TERRAIN]) * uexp;
+
+		b->accuracy[t] = ((ui->shots & UNIT_INFO_ACCURACY) + 1) * uexp;
+
+		if ((ui->range & UNIT_INFO_SHOT_DELAY) && !(u->flags & UNIT_FLAG_RESTED))
+			b->damage[t] = 0;
+		else if (dist >= minr && dist <= maxr)
 		{
 			if (eui->view & UNIT_INFO_AIRBORNE)
 				b->damage[t] = ui->damage >> 4;
@@ -91,7 +163,7 @@ void battle_init_shots(Battle * b)
 		{
 			if (b->health[t][i] > 0)
 			{
-				byte	sh = i | (u->type & UNIT_TEAM) | (t ? BATTLE_SHOT_COMBATAND : 0);
+				byte	sh = i | (t ? BATTLE_SHOT_COMBATAND : 0);
 				for(byte j=0; j<ns; j++)
 					b->shots[si++] = sh;
 			}
@@ -120,7 +192,7 @@ void battle_init(Battle * b, byte dunit)
 	window_fill(0x55);
 
 	for(char i=0; i<8; i++)
-		spr_set(i, false, 0, 0, 64 + 22, 7, true, false, false);	
+		spr_set(i, false, 0, 0, 48 + 9, 7, true, false, false);	
 }
 
 void battle_begin_attack(Battle * b, byte aunit)
@@ -132,14 +204,14 @@ void battle_begin_attack(Battle * b, byte aunit)
 	battle_init_shots(b);
 }
 
-void battle_enter_units(Battle * b, byte t, byte phase)
+void battle_enter_units(Battle * b, Combatand t, byte phase)
 {
 	Unit		*	u = units + b->units[t];
 
 	if (phase == 0)	
 	{
 		char color = TeamColors[(u->type & UNIT_TEAM) ? 1 : 0];
-		char image = 64 + (u->type & UNIT_TYPE);
+		char image = 48 + (u->type & UNIT_TYPE);
 		char ca = color | (TerrainColor[gridstate[u->my][u->mx] & GS_TERRAIN] << 4);
 
 		for(char i=3; i<8; i++)
@@ -177,12 +249,15 @@ void battle_enter_units(Battle * b, byte t, byte phase)
 		for(byte i=0; i<5; i++)
 		{
 			if (b->health[t][i])
+			{
 				window_put_sprite(2 + 6 * t, y, sp)
+				battle_draw_health(b, t, i);
+			}
 			y += 24;
 		}
 
 		for(char i=0; i<8; i++)
-			spr_set(i, false, 0, 0, 64 + 22, 7, true, false, false);
+			spr_set(i, false, 0, 0, 48 + 9, 7, true, false, false);
 	}
 }
 
@@ -195,21 +270,19 @@ bool battle_fire(Battle * b)
 	byte	f = b->firedShots;
 	if (f < b->numShots)
 	{
-		byte	from = b->shots[f] & BATTLE_SHOT_SRC;
-		byte	fi = (b->shots[f] & BATTLE_SHOT_COMBATAND) ? 1 : 0;
+		byte		from = b->shots[f] & BATTLE_SHOT_SRC;
+		Combatand	fi = (b->shots[f] & BATTLE_SHOT_COMBATAND) ? CBT_DEFENDER : CBT_ATTACKER;
 
 		if (b->health[fi][from] > 0)
 		{
 			byte	to;
-			byte	n = 5;
+			byte	n = 8;
 			do 	{
-				do
-				{
- 					to = rand() & 7;
-				} while (to > 4);
+				to = ((rand() & 0xff) * 5) >> 8;
  				n--;
-			} while (n > 0 && b->health[1-fi][to] == 0);
+			} while (n > 0 && b->health[1 - fi][to] == 0);
 			b->shots[f] |= BATTLE_SHOT_FIRED | (to << 4);
+			sidfx_play_shot();
 		}
 		else
 			b->shots[f] = 0;
@@ -223,18 +296,26 @@ bool battle_fire(Battle * b)
 			if (b->shots[f] & BATTLE_SHOT_FIRED)
 			{
 				byte	to = (b->shots[f] & BATTLE_SHOT_DST) >> 4;
-				byte	ti = (b->shots[f] & BATTLE_SHOT_COMBATAND) ? 0 : 1;
+				Combatand	ti = (b->shots[f] & BATTLE_SHOT_COMBATAND) ? CBT_ATTACKER : CBT_DEFENDER;
 
-				if (b->health[ti][to] > b->damage[1 - ti])
-					b->health[ti][to] -= b->damage[1 - ti];
-				else if (b->health[ti][to] > 0)
+				if (rand() % b->accuracy[1 - ti] > rand() % b->agility[ti])
 				{
-					b->health[ti][to] = 0;
-					window_clear_sprite(2 + 6 * ti, 24 * to, 0x55)
-					spr_set(7, true, 24 + (winX + 2 + 6 * ti) * 8, 50 + (winY + 3 * to) * 8, 64 + 24, 7, true, false, false);
+					if (b->health[ti][to] > b->damage[1 - ti])
+					{
+						b->health[ti][to] -= b->damage[1 - ti];
+						battle_draw_health(b, ti, to);
+						sidfx_play_hit();
+					}
+					else if (b->health[ti][to] > 0)
+					{
+						b->health[ti][to] = 0;
+						window_clear_sprite(2 + 6 * ti, 24 * to, 0x55)
+						spr_set(7, true, 24 + (winX + 2 + 6 * ti) * 8, 50 + (winY + 3 * to) * 8, 80, 7, true, false, false);
+						sidfx_play_explosion();
 
-					if (!battle_num_units(b, ti))
-						b->numShots = b->firedShots;
+						if (!battle_num_units(b, ti) && b->numShots > b->firedShots)
+							b->numShots = b->firedShots;
+					}
 				}
 			}	
 		}
@@ -259,10 +340,10 @@ bool battle_fire_animate(Battle * b, char phase)
 	{
 		if (b->shots[fi] & BATTLE_SHOT_FIRED)
 		{
-			byte	from = b->shots[fi] & BATTLE_SHOT_SRC;
-			byte	fc = (b->shots[fi] & BATTLE_SHOT_COMBATAND) ? 1 : 0;
-			byte	to = (b->shots[fi] & BATTLE_SHOT_DST) >> 4;
-			byte	tc = (b->shots[fi] & BATTLE_SHOT_COMBATAND) ? 0 : 1;
+			byte		from = b->shots[fi] & BATTLE_SHOT_SRC;
+			Combatand	fc = (b->shots[fi] & BATTLE_SHOT_COMBATAND) ? CBT_DEFENDER : CBT_ATTACKER;
+			byte		to = (b->shots[fi] & BATTLE_SHOT_DST) >> 4;
+			Combatand	tc = (b->shots[fi] & BATTLE_SHOT_COMBATAND) ? CBT_ATTACKER : CBT_DEFENDER;
 
 			byte	pi = (step - fi - 1) * 8 + phase;
 
@@ -279,24 +360,30 @@ bool battle_fire_animate(Battle * b, char phase)
 		spr_show(si, false);
 		si++;
 	}
-	spr_image(7, 64 + 24 + phase);
+	spr_image(7, 80 + phase);
 }
 
-void battle_return_units(Battle * b, byte t)
+void battle_return_units(Battle * b, Combatand t)
 {
 	Unit		*	u = units + b->units[t];
 
 	u->count = battle_num_units(b, t);
+
+	if (u->flags < 0x80)
+		u->flags += 0x20;
 }
 
 void battle_complete_attack(Battle * b)
 {
-	battle_return_units(b, 0);
+	battle_return_units(b, CBT_ATTACKER);
 }
 
 
 void battle_complete(Battle * b)
 {
-	battle_return_units(b, 1);
+	battle_return_units(b, CBT_DEFENDER);
+	
+	for(byte i=0; i<8; i++)
+		spr_show(i, false);
 }
 

@@ -1,11 +1,25 @@
 #include "hexdisplay.h"
 #include <c64/vic.h>
 #include <c64/sprites.h>
+#include <c64/memmap.h>
+#include <oscar.h>
 
 #include "units.h"
 
+#pragma section( playfield, 0, , , bss)
+
+#pragma region( playfield, 0xc000, 0xc800, , , {playfield} )
+
+#pragma bss( playfield )
+
 byte gridstate[32][32];
 byte gridunits[32][32];
+
+#pragma align(gridstate, 256)
+#pragma align(gridunits, 256)
+
+#pragma bss(bss)
+
 
 byte viewstate[8][16];
 byte viewcolor[9][16];
@@ -13,12 +27,12 @@ byte viewunits[8][16];
 
 const char * TerrainNames[6] = 
 {
-	"OCEAN",
-	"SHALLOWS",
-	"BEACH",
-	"ROAD",
-	"FORREST",
-	"MOUNTAIN"
+	S"OCEAN",
+	S"SHALLOWS",
+	S"BEACH",
+	S"ROAD",
+	S"FORREST",
+	S"MOUNTAIN"
 };
 
 char ox = 0, oy = 0;
@@ -34,15 +48,42 @@ byte * hexscreen[8] =
 	(byte *)0xc800 +  4 * 120, (byte *)0xc800 +  5 * 120, (byte *)0xc800 +  6 * 120, (byte *)0xc800 + 7 * 120
 };
 
-const byte sprites[] = {
+#pragma section( assets, 0)
 
-#embed "shalldom.bin"
+#pragma region( assets, 0xc000, 0xd000, , , {assets} )
+
+#pragma data( assets )
+
+const byte lzosprites[] = {
+
+#embed lzo "shalldom - Sprites.bin"
 
 };
 
+const byte lzostatusfont[] = {
+
+#embed lzo "statusfont - Chars.bin"
+
+};
+
+#pragma data(data)
+
+
+
+#pragma section( spriteset, 0, , , bss)
+
+#pragma region( spriteset, 0xcc00, 0xd000, , , {spriteset} )
+
+#pragma bss( spriteset )
+
+byte spriteset[1024];
+
+#pragma bss(bss)
+
+
 const char * hex_sprite_data(byte sp)
 {
-	return sprites + 64 * sp;
+	return spriteset + 64 * sp;
 }
 
 // 6 x 3 cells for two grid items
@@ -165,10 +206,39 @@ const byte gmask1[16][8] =
 const byte TerrainColor[16] = {
 	VCOL_BLUE, VCOL_LT_BLUE, VCOL_YELLOW, VCOL_MED_GREY, VCOL_GREEN, VCOL_LT_GREY, 0, 0,
 	VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY, VCOL_DARK_GREY
-}
+};
 
 const byte TeamColors[2] = {
-	VCOL_RED, VCOL_CYAN, 
+	VCOL_CYAN, VCOL_RED,
+};
+
+
+static byte	spritemask[9][32];
+
+void grid_init_sprite(void)
+{
+	for(char si=0; si<9; si++)
+	{
+		const byte * sp = spriteset + si * 64 + 6;
+		byte * dp = spritemask[si];
+
+		char i = 0;
+
+		for(char y = 0; y<16; y++)
+		{
+			byte m0 = sp[0], m1 = sp[1], m2 = sp[2];
+			m0 ^= (m0 & 0xaa) >> 1;
+			m1 ^= (m1 & 0xaa) >> 1;
+			m2 ^= (m2 & 0xaa) >> 1;
+
+			sp += 3;
+
+			dp[ 0] = (m0 << 4) | (m1 >> 4);
+			dp[16] = (m1 << 4) | (m2 >> 4);
+
+			dp++;
+		}		
+	}
 }
 
 void overlay(byte cx, byte cy, byte si, byte c)
@@ -192,13 +262,27 @@ void overlay(byte cx, byte cy, byte si, byte c)
 	cp[81] = (cp[81] & 0xf0) | c; 
 	cp[82] = (cp[82] & 0xf0) | c; 		
 
-	byte * dp = hexhires[cy] + cx * 3 * 8;
+	byte * dp = hexhires[cy] + cx * 3 * 8 + 2;
 
 	if (cx & 1)
-		dp += 325;
+		dp += 638;
 
+#if 1
+	const byte * sp = spritemask[si];
+
+	for(char y = 0; y<16; y++)
+	{
+		dp[ 8] ^= sp[0];
+		dp[16] ^= sp[16];
+		
+		dp++;
+		sp++;
+
+		if (!((unsigned)dp & 7))
+			dp += 312;
+	}
+#else
 	const byte * sp = sprites + si * 64;
-
 	for(char y = 0; y<21; y++)
 	{
 		byte m0 = sp[0], m1 = sp[1], m2 = sp[2];
@@ -216,13 +300,14 @@ void overlay(byte cx, byte cy, byte si, byte c)
 		if (!((unsigned)dp & 7))
 			dp += 312;
 	}
+#endif
 }
 
 #define BORDER_COLOR	0
 
-void putcr0(const byte * cm, const byte * cn, byte * cp)
+void putcr0(const byte * cm, byte * cp)
 {
-	byte c0 = BORDER_COLOR, c1 = BORDER_COLOR << 4, c2 = cn[0];
+	byte c0 = BORDER_COLOR, c1 = BORDER_COLOR << 4, c2 = cm[16];
 	cp[0] = c1 | c2;
 
 	for(byte ix=0; ix<6; ix++)
@@ -240,13 +325,12 @@ void putcr0(const byte * cm, const byte * cn, byte * cp)
 		cp[4] = c1;
 		cp[5] = c1;
 
-		c2 = cn[2];
+		c2 = cm[18];
 
 		cp[6] = c1 | c2;
 
 		cp += 6;
 		cm += 2;
-		cn += 2;
 	}
 
 	cp[1] = c2 << 4;
@@ -255,9 +339,9 @@ void putcr0(const byte * cm, const byte * cn, byte * cp)
 	cp[3] = c3 | c2;
 }
 
-void putcr1(const byte * cm, const byte * cn, byte * cp)
+void putcr1(const byte * cm, byte * cp)
 {
-	byte c0 = BORDER_COLOR, c1 = BORDER_COLOR << 4, c2 = cn[0] << 4, c33 = BORDER_COLOR;
+	byte c0 = BORDER_COLOR, c1 = BORDER_COLOR << 4, c2 = cm[16] << 4, c33 = BORDER_COLOR;
 
 	cp[0] = c2;
 
@@ -267,18 +351,17 @@ void putcr1(const byte * cm, const byte * cn, byte * cp)
 		cp[2] = c2;
 		cp[3] = c2;
 
-		c1 = cm[1] << 4; c33 = cn[1];
+		c1 = cm[1] << 4; c33 = cm[17];
 
 		cp[4] = c1 | c33;
 		cp[5] = c1 | c33;
 
-		c2 = cn[2] << 4; 
+		c2 = cm[18] << 4; 
 
 		cp[6] = c2;
 
 		cp += 6;
 		cm += 2;
-		cn += 2;
 	}
 
 	cp[1] = c2;
@@ -286,9 +369,9 @@ void putcr1(const byte * cm, const byte * cn, byte * cp)
 	cp[3] = c2;
 }
 
-void putcr2(const byte * cm, const byte * cn, byte * cp)
+void putcr2(const byte * cm, byte * cp)
 {
-	byte c0 = BORDER_COLOR, c33 = BORDER_COLOR << 4, c2 = cn[0];
+	byte c0 = BORDER_COLOR, c33 = BORDER_COLOR << 4, c2 = cm[16];
 	cp[0] = c33 | c2;
 
 	for(byte ix=0; ix<6; ix++)
@@ -297,7 +380,7 @@ void putcr2(const byte * cm, const byte * cn, byte * cp)
 		cp[1] = c2 << 4;
 		cp[2] = c2 << 4;
 
-		byte c35 = cn[1] << 4;
+		byte c35 = cm[17] << 4;
 
 		cp[3] = c35 | c2;
 
@@ -306,12 +389,12 @@ void putcr2(const byte * cm, const byte * cn, byte * cp)
 		cp[4] = c33;
 		cp[5] = c33;
 
-		c2 = cn[2];
+		c2 = cm[18];
 		
 		cp[6] = c33 | c2;
 
 		cp += 6;
-		cn += 2;
+		cm += 2;
 	}
 
 	cp[1] = c2 << 4;
@@ -394,13 +477,22 @@ void drawUnits(void)
 {
 	for(char i=0; i<numUnits; i++)
 	{
-		char x = units[i].mx, y = units[i].my;
-		char	f = gridstate[y][x];
-		f |= GS_UNIT;
-		if (units[i].type & UNIT_COMMANDED)
-			f |= GS_GHOST;
+		char x = units[i].mx, y = units[i].my;		
+		char f = gridstate[y][x];
+
+		if (units[i].count)
+		{
+			f |= GS_UNIT;
+			if (units[i].type & UNIT_COMMANDED)
+				f |= GS_GHOST;
+			gridunits[y][x] = i;
+		}
+		else
+		{
+			f &= ~(GS_UNIT | GS_GHOST);
+			gridunits[y][x] = 0xff;
+		}
 		gridstate[y][x] = f;
-		gridunits[y][x] = i;
 	}
 }
 
@@ -409,8 +501,12 @@ void moveUnit(byte unit, byte x, byte y)
 	char px = units[unit].mx, py = units[unit].my;
 	units[unit].mx = x; units[unit].my = y;
 
-	gridstate[py][px] &= ~(GS_UNIT | GS_GHOST);
-	gridunits[py][px] = 0xff;
+
+	if (gridunits[py][px] == unit)
+	{
+		gridstate[py][px] &= ~(GS_UNIT | GS_GHOST);
+		gridunits[py][px] = 0xff;
+	}
 	char	f = gridstate[y][x];
 	f |= GS_UNIT;
 	if (units[unit].type & UNIT_COMMANDED)
@@ -434,8 +530,11 @@ void ghostUnit(byte unit)
 void hideUnit(byte unit)
 {
 	char px = units[unit].mx, py = units[unit].my;
-	gridstate[py][px] &= ~(GS_UNIT | GS_GHOST);
-	gridunits[py][px] = 0xff;
+	if (gridunits[py][px] == unit)
+	{
+		gridstate[py][px] &= ~(GS_UNIT | GS_GHOST);
+		gridunits[py][px] = 0xff;
+	}
 }
 
 void scroll(sbyte dx, sbyte dy)
@@ -634,6 +733,49 @@ void updateViewCell(char cx, char cy)
 }
 
 
+void grid_redraw_colors(void)
+{
+	for(char cy=0; cy<8; cy++)
+	{
+		for(char cx=0; cx<13; cx++)
+		{
+			if (cy < (char)(8 - (cx & 1)))
+			{
+				char gstate = gridstate[cy + oy][cx + ox];
+
+				viewcolor[cy + 1][cx] = TerrainColor[gstate & GS_TERRAINX];
+				viewunits[cy][cx] = 0xff;
+			}
+		}
+	}
+
+	byte * cp = Screen;
+	const byte * cm = &(viewcolor[0][0]);
+
+	for(char y=0; y<8; y++)
+	{
+		const byte * cn = cm + 16;
+
+		putcr0(cm, cp);
+		cp += 40;
+		putcr1(cm, cp);
+		cp += 40;
+		putcr2(cm, cp);
+		cp += 40;
+	
+		if (y > 0)
+		{
+			for(char cx=0; cx<13; cx++)
+				updateViewCell(cx, y - 1);
+		}
+
+		cm = cn;
+	}
+
+	for(char cx=0; cx<13; cx++)
+		updateViewCell(cx, 7);	
+}
+
 void updateColors(void)
 {
 	for(char cy=0; cy<8; cy++)
@@ -656,11 +798,11 @@ void updateColors(void)
 	{
 		const byte * cn = cm + 16;
 
-		putcr0(cm, cn, cp);
+		putcr0(cm, cp);
 		cp += 40;
-		putcr1(cm, cn, cp);
+		putcr1(cm, cp);
 		cp += 40;
-		putcr2(cm, cn, cp);
+		putcr2(cm, cp);
 		cp += 40;
 	
 		if (y > 0)
@@ -717,15 +859,27 @@ const char mod6[] = {
 	0, 1, 2, 3, 4, 5,	
 };
 
+void grid_blank(void)
+{
+	memset(viewstate, 0x00, 128);
+	memset(viewunits, 0xff, 128);
+
+	for(char cy=0; cy<8; cy++)
+	{
+		for(char cx=0; cx<13; cx++)
+		{
+			if (cy < (char)(8 - (cx & 1)))
+				viewcolor[cy + 1][cx] = VCOL_LT_BLUE;
+		}
+	}
+}
+
 void grid_redraw_overlay(char cx, char cy)
 {
 	if (cy < (char)(8 - (cx & 1)))
 	{
-		char gstate = gridstate[cy + oy][cx + ox];
-		viewstate[cy][cx] = gstate;
-
-		char gunit = gridunits[cy + oy][cx + ox];
-		viewunits[cy][cx] = gunit;
+		char gstate = viewstate[cy][cx];
+		char gunit = viewunits[cy][cx];
 
 		if (gstate & GS_FLAGS)
 			drawBaseCell(cx, cy);
@@ -783,11 +937,11 @@ void grid_redraw_rect(char x, char y, char w, char h)
 
 		const byte * cn = cm + 16;
 
-		putcr0(cm, cn, cp);
+		putcr0(cm, cp);
 		cp += 40;
-		putcr1(cm, cn, cp);
+		putcr1(cm, cp);
 		cp += 40;
-		putcr2(cm, cn, cp);
+		putcr2(cm, cp);
 		cp += 40;
 		cm = cn;
 
@@ -805,7 +959,7 @@ void grid_redraw_rect(char x, char y, char w, char h)
 void drawBaseGrid(void)
 {
 	grid_redraw_rect(0, 0, 40, 24);
-	return;
+#if 0
 
 	memset(Color, 0x01, 1000);
 	memset(viewunits, 0xff, sizeof(viewunits));
@@ -830,8 +984,9 @@ void drawBaseGrid(void)
 		if (ry == 3)
 			ry = 0;
 	}
+#endif
 #if 1
-	dp = Hires + 23 * 320;
+	byte * dp = Hires + 23 * 320;
 	for(char x=0; x<40; x++)
 	{
 		dp[7] = 0x00;
@@ -880,7 +1035,7 @@ struct MoveNode
 };
 
 MoveNode	moveNodes[64];
-byte		moveWrite, moveRead;
+byte		moveWrite, moveRead, moveCount;
 
 void markMovement(sbyte gx, sbyte gy2, sbyte dist, const byte * cost)
 {
@@ -912,6 +1067,7 @@ void markMovement(sbyte gx, sbyte gy2, sbyte dist, const byte * cost)
 			{
 				gridstate[iy][ix] = gs | GS_SELECT;
 				gridunits[iy][ix] = dist;
+				moveCount++;
 			
 				if (dist > 0)
 				{
@@ -947,14 +1103,10 @@ bool calcMovement(byte unit)
 
 	moveWrite = 1;
 	moveRead = 0;
-
-	bool	moving = false;
+	moveCount = 0;
 
 	while (moveRead != moveWrite)
 	{
-		if (moveRead != 0)
-			moving = true;
-
 		sbyte gx = moveNodes[moveRead].mx;
 		sbyte gy2 = moveNodes[moveRead].my2;
 		sbyte dist = gridunits[gy2 >> 1][gx];
@@ -971,7 +1123,7 @@ bool calcMovement(byte unit)
 
 	gridunits[uy][ux] = unit;
 
-	return moving;
+	return moveCount > 0;
 }
 
 bool calcAttack(byte unit)
@@ -1094,16 +1246,19 @@ void calcVisibility(byte team)
 
 void initDisplay(void)
 {
-	*(byte *)0x01 = 0x31;
+	mmap_set(MMAP_RAM);
 
-	memcpy(Sprmem, sprites, 2048);
-	memcpy(Sprmem + 2048, Sprmem + 2048, 2048);
+	oscar_expand_lzo(spriteset + 512, lzosprites);
+	memcpy(spriteset, spriteset + 512, 1024);
+	oscar_expand_lzo(Sprmem, lzostatusfont);
 
-	*(byte *)0x01 = 0x35;
+	mmap_set(MMAP_NO_ROM);
 
 	spr_init(Screen);
 
 	vic.color_border = BORDER_COLOR;
+	vic.spr_mcolor0 = VCOL_BLACK;
+	vic.spr_mcolor1 = VCOL_WHITE;
 
 	for(char i=0; i<16; i++)
 	{
@@ -1122,4 +1277,6 @@ void initDisplay(void)
 		gfield0[ 4][i] &= gmask0[ 4][i];
 		gfield0[ 8][i] &= gmask0[ 8][i];
 	}
+
+	grid_init_sprite();
 }
