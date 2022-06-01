@@ -90,7 +90,7 @@ void status_update_pos(char x, char y)
 	}
 }
 
-#define UNIT_COL	22
+#define UNIT_COL	23
 #define STATE_COL	15
 
 void status_update_state(const char * state, byte color)
@@ -134,7 +134,7 @@ void status_update_unit(char unit)
 		Screen[24 * 40 + UNIT_COL + 4 + i] = '0' + units[unit].count;
 		Screen[24 * 40 + UNIT_COL + 5 + i] = 0x1b + ((units[unit].flags & UNIT_FLAG_EXPERIENCE) >> 5);
 
-		while (i < 12)
+		while (i < 11)
 		{
 			Screen[24 * 40 + UNIT_COL + 6 + i] = ' ';
 			i++;

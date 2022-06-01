@@ -33,6 +33,23 @@ void cursor_fromgrid(void)
 void cursor_init(char cx, char cy)
 {
 	gridX = cx; gridY = cy;
+
+	if (cx < 6)
+		ox = 0;
+	else if (cx > 24)
+		ox = 18;
+	else
+		ox = cx - 6;
+
+	ox &= ~1;
+	
+	if (cy < 4)
+		oy = 0;
+	else if (cy > 28)
+		oy = 24;
+	else
+		oy = cy - 4;
+
 	cursor_fromgrid();
 }
 

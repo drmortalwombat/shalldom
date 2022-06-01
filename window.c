@@ -106,6 +106,39 @@ void window_draw_vbar(char x, char y, char h, char c)
 	}
 }
 
+void window_draw_quad(char x, char y, char c)
+{
+	char	*	wp = winP + (8 * (40 * (y >> 2) + (x >> 1)) | 2 * (y & 3));
+
+	char and = 0xf0 >> (4 * (x & 1));
+	char or = cpad[c] & and;
+	and = ~and;
+
+	*wp = (*wp & and) | or; wp++;
+	*wp = (*wp & and) | or; wp++;
+	if (!((unsigned)wp & 7))
+		wp += 312;
+	*wp = (*wp & and) | or; wp++;
+	*wp = (*wp & and) | or; wp++;
+}
+
+void window_draw_quad_u(char x, char y)
+{
+	char	*	wp = winP + (8 * (40 * (y >> 2) + (x >> 1)) | 2 * (y & 3));
+
+	char or = 0xf0 >> (4 * (x & 1));
+	char and = ~or;
+	or &= 0xcc;
+	
+
+	*wp = (*wp & and) | or wp++;
+	*wp = (*wp & and) | or; wp++;
+	if (!((unsigned)wp & 7))
+		wp += 312;
+	*wp = (*wp & and) | or; wp++;
+	*wp = (*wp & and); wp++;
+}
+
 void window_put_sprite(char x, char y, const char * sprite)
 {
 	char	*	wp = winP + (8 * (40 * (y >> 3) + x) | (y & 7));

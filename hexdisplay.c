@@ -213,11 +213,11 @@ const byte TeamColors[2] = {
 };
 
 
-static byte	spritemask[9][32];
+static byte	spritemask[10][32];
 
 void grid_init_sprite(void)
 {
-	for(char si=0; si<9; si++)
+	for(char si=0; si<10; si++)
 	{
 		const byte * sp = spriteset + si * 64 + 6;
 		byte * dp = spritemask[si];
@@ -1248,9 +1248,11 @@ void initDisplay(void)
 {
 	mmap_set(MMAP_RAM);
 
-	oscar_expand_lzo(spriteset + 512, lzosprites);
-	memcpy(spriteset, spriteset + 512, 1024);
+	oscar_expand_lzo(Hires, lzosprites);
 	oscar_expand_lzo(Sprmem, lzostatusfont);
+
+	memcpy(spriteset, Hires, 0x400);
+	memcpy(Sprmem + 0x200, Hires + 0x400, 0xe00);
 
 	mmap_set(MMAP_NO_ROM);
 

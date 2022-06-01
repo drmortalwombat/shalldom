@@ -35,7 +35,7 @@
 
 
 
-struct UnitInfo		UnitInfos[9] = {
+struct UnitInfo		UnitInfos[10] = {
 	{
 		0x04, 0x01,
 		{127, 24, 16, 16, 48, 127},
@@ -67,9 +67,9 @@ struct UnitInfo		UnitInfos[9] = {
 		0x80, 0x44, 0x2c
 	},
 	{
-		0x88, 0x81,
+		0x86, 0x81,
 		{8, 8, 8, 8, 8, 8},
-		S"BOMBER SQUAD",
+		S"BOMB SQUAD",
 		0x0f, 0x82, 0x12
 	},
 	{
@@ -88,7 +88,13 @@ struct UnitInfo		UnitInfos[9] = {
 		0x02, 0x00,
 		{127, 127, 127, 127, 127, 127},
 		S"COMMAND",
-		0x00, 0x60, 0x00
+		0x00, 0x17, 0x00
+	},
+	{
+		0x87, 0x00,
+		{12, 12, 12, 12, 12, 12},
+		S"SCOUT DRONE",
+		0x00, 0x12, 0x00
 	}
 };
 
@@ -178,7 +184,7 @@ int unit_attack_value(char from, char to)
 
 	if (dist >= minr && dist <= maxr)
 	{
-		int	damage;
+		unsigned	damage;
 		if (eui->view & UNIT_INFO_AIRBORNE)
 			damage = ui->damage >> 4;
 		else
@@ -186,11 +192,22 @@ int unit_attack_value(char from, char to)
 
 		if (damage > 0)
 		{
-			byte	ns = ui->shots >> 4;
+			unsigned	ns = ui->shots >> 4;
 
-			return damage * ns * u->count;
+			return damage * ns * u->count * 16 / ((2 + eu->count) * ((eui->armour & 0x0f) + 1));
 		}
 	}
 
 	return 0;
+}
+
+sbyte unit_find(byte type)
+{
+	for(char i=0; i<numUnits; i++)
+	{
+		if ((units[i].type & (UNIT_TYPE | UNIT_TEAM)) == type)
+			return i;
+	}
+
+	return -1;
 }

@@ -94,6 +94,7 @@ void battle_init_health(Battle * b, Combatand t)
 	byte			nu = u->count;
 	byte			health = (ui->armour & UNIT_INFO_ARMOUR) >> 3;
 
+	b->mhealth[t] = health;
 	for(byte i=0; i<nu; i++)
 		b->health[t][i] = health;
 	for(byte i=nu; i<5; i++)
@@ -102,17 +103,24 @@ void battle_init_health(Battle * b, Combatand t)
 
 void battle_draw_health(Battle * b, Combatand t, byte i)
 {
-	char	h = b->health[t][i] >> 1;
-	char	x = 8 + 36 * t;
-	char	y = 4 + 24 * i;
+	char	h = b->health[t][i] >> 1;	
+	char	m = b->mhealth[t] >> 1;
 
-	window_draw_vbar(x, y, 16 - h, 0);
-	window_draw_vbar(x, y + 16 - h, h, 3);
+	char	x = 8 + 36 * t;
+	char	y = 20 + 24 * i - m;
+
+	window_draw_vbar(x, y, m - h, 0);
+	window_draw_vbar(x, y + m - h, h, 3);
 }
 
-char ground_agility[8] = 
+char ground_agility[2][8] = 
 {
-	1, 1, 2, 1, 4, 7
+	{
+		0, 0, 2, 0, 5, 12
+	},
+	{
+		0, 0, 10, 5, 20, 30
+	},
 };
 
 void battle_init_shots(Battle * b)
@@ -137,10 +145,17 @@ void battle_init_shots(Battle * b)
 		unsigned	minr = hex_size_square(ui->range & UNIT_INFO_SHOT_MIN ? 2 : 1);
 
 		byte			uexp = ((u->flags & UNIT_FLAG_EXPERIENCE) >> 5) + 2;
-		if ((ui->armour & UNIT_INFO_DIG_IN) && (u->flags & UNIT_FLAG_RESTED))
-			uexp *= 2;
+		byte			agility = (ui->armour & UNIT_INFO_AGILITY) + 1;
 
-		b->agility[t] = ((ui->armour & UNIT_INFO_AGILITY) + ground_agility[gridstate[u->my][u->mx] & GS_TERRAIN]) * uexp;
+		if (!(ui->view & UNIT_INFO_AIRBORNE))
+		{
+			byte	dugin = 0;
+			if ((ui->armour & UNIT_INFO_DIG_IN) && (u->flags & UNIT_FLAG_RESTED))
+				dugin = 1;
+			agility += ground_agility[dugin][gridstate[u->my][u->mx] & GS_TERRAIN];
+		}
+
+		b->agility[t] = agility * uexp;
 
 		b->accuracy[t] = ((ui->shots & UNIT_INFO_ACCURACY) + 1) * uexp;
 
@@ -192,7 +207,7 @@ void battle_init(Battle * b, byte dunit)
 	window_fill(0x55);
 
 	for(char i=0; i<8; i++)
-		spr_set(i, false, 0, 0, 48 + 9, 7, true, false, false);	
+		spr_set(i, false, 0, 0, 48 + 15, 7, true, false, false);	
 }
 
 void battle_begin_attack(Battle * b, byte aunit)
@@ -257,7 +272,7 @@ void battle_enter_units(Battle * b, Combatand t, byte phase)
 		}
 
 		for(char i=0; i<8; i++)
-			spr_set(i, false, 0, 0, 48 + 9, 7, true, false, false);
+			spr_set(i, false, 0, 0, 48 + 15, 7, true, false, false);
 	}
 }
 

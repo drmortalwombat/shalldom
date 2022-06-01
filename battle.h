@@ -18,6 +18,7 @@ struct Battle
 	byte	agility[2];
 	byte	accuracy[2];
 	byte	health[2][5];
+	byte	mhealth[2];
 	byte	shots[64];
 	byte	numShots, firedShots;
 };
@@ -35,7 +36,7 @@ struct BattlePair
 
 extern BattlePair	BattlePairs[64];
 extern byte			NumBattlePairs;
-extern byte			ground_agility[8];
+extern byte			ground_agility[2][8];
 
 
 

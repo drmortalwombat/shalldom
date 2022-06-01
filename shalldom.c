@@ -20,54 +20,8 @@
 #include "splitscreen.h"
 #include "textoverlay.h"
 #include "levels.h"
+#include "gamemusic.h"
 #include <audio/sidfx.h>
-
-#pragma region(main, 0x0a00, 0xa000, , , {code, data, bss, heap, stack} )
-
-#pragma section( music, 0)
-
-#pragma region( music, 0xa000, 0xc000, , , {music} )
-
-#pragma data(music)
-
-__export char music[] = {
-	#embed 0x2000 0x88 "ArmyGame.sid" 
-}
-
-// 00 - Game theme neutral
-// 01 - Results
-// 02 - Game theme Enemy winning
-
-#pragma data(data)
-
-void music_init(char tune)
-{
-	__asm
-	{
-		lda		tune
-		jsr		$a000
-	}
-}
-
-void music_play(void)
-{
-	__asm
-	{
-		jsr		$a003
-	}
-}
-
-void music_patch_voice3(bool enable)
-{
-	*(char *)0xa08f = enable ? 0x20 : 0x4c;
-}
-
-AITask	aitasks[] = {
-	{AIS_IDLE + 0 * 8,  0,  0, 0},
-	{AIS_RUSH + 0 * 8,  3, 15, 0},
-	{AIS_RUSH + 1 * 8, 17,  9, 0},
-	{AIS_RUSH + 1 * 8, 11, 22, 0},
-}
 
 int main(void)
 {
@@ -91,8 +45,6 @@ int main(void)
 	split_init();
 
 	sid.fmodevol = 0x0f;
-
-	level_setup(0);
 
 #if 0
 	tovl_show("PREPARE\nTERRAIN\nDATA\n", VCOL_YELLOW);

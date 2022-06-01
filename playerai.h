@@ -6,7 +6,9 @@
 enum AIStrategy
 {
 	AIS_IDLE,
-	AIS_RUSH
+	AIS_RUSH,
+	AIS_STROLL,
+	AIS_HOLD
 };
 
 struct AITask

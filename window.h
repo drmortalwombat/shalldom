@@ -23,6 +23,10 @@ void window_put_sprite(char x, char y, const char * sprite);
 
 void window_draw_vbar(char x, char y, char h, char c);
 
+void window_draw_quad(char x, char y, char c);
+
+void window_draw_quad_u(char x, char y);
+
 void window_clear_sprite(char x, char y, char fill);
 
 #pragma compile("window.c")

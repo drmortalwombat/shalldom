@@ -38,6 +38,7 @@ extern const byte MovePhaseFlags[8];
 extern MovePhases MovePhase;
 
 extern GamePhases GamePhase;
+extern char GameDays;
 
 extern const char * PhaseNames[8];
 

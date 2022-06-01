@@ -12,6 +12,7 @@
 #define UNIT_HOVERCRAFT		6
 #define UNIT_ARTILLERY		7
 #define UNIT_COMMAND		8
+#define UNIT_SCOUT_DRONE	9
 
 #define UNIT_INFO_RANGE		0x0f
 #define UNIT_INFO_AIRBORNE	0x80
@@ -38,7 +39,7 @@ struct UnitInfo
 	byte			damage, armour, shots, pad;
 };
 
-extern struct UnitInfo		UnitInfos[9];
+extern struct UnitInfo		UnitInfos[10];
 
 struct Unit
 {
@@ -73,6 +74,8 @@ void unit_add(char type, char mx, char my, char id);
 bool unit_can_attack(char from, char to);
 
 int unit_attack_value(char from, char to);
+
+sbyte unit_find(byte type);
 
 #pragma compile("units.c")
 

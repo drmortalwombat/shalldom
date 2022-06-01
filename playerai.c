@@ -49,24 +49,28 @@ unsigned tsqrt(unsigned n)
 
 int playerai_eval_move(byte unit, byte gx, byte gy, const AITask * task)
 {
-	Unit	*	ua = units + unit;
-	byte		team = ua->type & UNIT_TEAM;
+	Unit		*	ua = units + unit;
+	UnitInfo	*	ui = UnitInfos + (ua->type & UNIT_TYPE);
+	byte			team = ua->type & UNIT_TEAM;
 
-	int			value = rand() & 3;
+	int				value = rand() & 3;
 
-	byte	ux = ua->mx, uy = ua->my;
+	byte			ux = ua->mx, uy = ua->my;
 
 	ua->mx = gx;
 	ua->my = gy;
 
-	byte	terrain = gridstate[gy][gx] & GS_TERRAIN;
-
-	value += ground_agility[terrain] * 16;
-
-	if (UnitInfos[ua->type & UNIT_TYPE].armour & UNIT_INFO_DIG_IN)
+	if (!(ui->view & UNIT_INFO_AIRBORNE))
 	{
-		if (ux == gx && uy == gy)
-			value += 120;
+		byte	terrain = gridstate[gy][gx] & GS_TERRAIN;
+		byte	dugin = 0;
+
+		if (UnitInfos[ua->type & UNIT_TYPE].armour & UNIT_INFO_DIG_IN)
+		{
+			if (ux == gx && uy == gy)
+				dugin = 1;
+		}
+		value += ground_agility[dugin][terrain] * 16;
 	}
 
 	AIStrategy	ais = task->strategy & AI_STRATEGY;
@@ -80,6 +84,9 @@ int playerai_eval_move(byte unit, byte gx, byte gy, const AITask * task)
 	case AIS_RUSH:
 		value += 4096 - tsqrt(dd) * 32;
 		attscore = 20;
+		break;
+	case AIS_STROLL:
+		value += 4096 - tsqrt(dd) * 32;
 		break;
 	}
 
@@ -112,23 +119,29 @@ void playerai_advance(byte team)
 		if ((ua->type & (UNIT_TEAM | UNIT_COMMANDED)) == team)
 		{
 			const AITask	*	task = AITasks + (ua->id >> 3);
+			bool				advance = false;
 
-			AIStrategy	ais = task->strategy & AI_STRATEGY;
-			sbyte		dx = task->mx - ua->mx, dy = task->my - ua->my;
-
-			if (dx < 0) dx = -dx;
-			if (dy < 0) dy = -dy;
-			byte	dd = dx;
-			if (dy > dx)
-				dd = dy;
-
-			bool	advance = false;
-			switch (ais)
+			if (task->timeout == GameDays)
+				advance = true;
+			else
 			{
-			case AIS_RUSH:
-				if (dd <= 1)
-					advance = true;
-				break;
+				AIStrategy	ais = task->strategy & AI_STRATEGY;
+				sbyte		dx = task->mx - ua->mx, dy = task->my - ua->my;
+
+				if (dx < 0) dx = -dx;
+				if (dy < 0) dy = -dy;
+				byte	dd = dx;
+				if (dy > dx)
+					dd = dy;
+
+				switch (ais)
+				{
+				case AIS_RUSH:
+				case AIS_STROLL:
+					if (dd <= 1)
+						advance = true;
+					break;
+				}
 			}
 
 			if (advance)
@@ -196,6 +209,10 @@ void playerai_select_battles(byte team)
 	// collecting all possible battles
 
 	char battlePairs = 0;
+	char tcnt[32];
+
+	for(byte i=0; i<32; i++)
+		tcnt[i] = 0;
 
 	for(byte i=0; i<numUnits; i++)
 	{
@@ -223,12 +240,19 @@ void playerai_select_battles(byte team)
 							BattlePairs[battlePairs].to = j;
 							BattlePairs[battlePairs].value = value;
 							battlePairs++;
+
+							tcnt[j]++;
 						}
 					}
 				}
 			}
 		}
 	}
+
+	for(byte i=0; i<battlePairs; i++)
+		BattlePairs[i].value += 4 << tcnt[BattlePairs[i].to];
+
+	// Hand out bonus for multi target
 
 	NumBattlePairs = 0;
 	while (NumBattlePairs < battlePairs)
@@ -244,6 +268,9 @@ void playerai_select_battles(byte team)
 				maxv = BattlePairs[i].value;
 			}
 		}
+
+		if (maxv < -32)
+			break;
 
 		BattlePair	p = BattlePairs[maxp];
 		BattlePairs[maxp] = BattlePairs[NumBattlePairs];

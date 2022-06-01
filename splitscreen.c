@@ -36,8 +36,6 @@ char ovlline;
 
 __interrupt void split_overlay_irq(void)
 {
-	vic.color_border++;
-
 	char	k = ovlline;
 	__assume(k < 3);
 
@@ -63,27 +61,21 @@ __interrupt void split_overlay_irq(void)
 
 	if (sprovlx[k] != 20 && sprovlx[k] != 41)
 		sprovlx[k]++;
-
-	vic.color_border--;
 }
 
 __interrupt void split_sidfx_irq(void)
 {
-	vic.color_border++;
 	sidfx_loop_2();
 	__asm {
 		jsr 0xa003
 	}
-	vic.color_border--;
 }
 
 __interrupt void split_music_irq(void)
 {
-	vic.color_border++;
 	__asm {
 		jsr 0xa003
 	}
-	vic.color_border--;
 }
 
 void split_init(void)

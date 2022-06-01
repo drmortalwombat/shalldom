@@ -16,6 +16,16 @@ void tovl_show(const char * text, char color)
 				c = 0;
 				k++;
 			}
+			else if (c == '!')
+			{
+				c = 37;
+				k++;
+			}
+			else if (c == '?')
+			{
+				c = 38;
+				k++;
+			}
 			else if (c >= '0')
 			{
 				c -= 21;
@@ -37,6 +47,7 @@ void tovl_show(const char * text, char color)
 	vic.spr_multi = 0xff;
 	vic.spr_expand_x = 0x00;
 	vic.spr_expand_y = 0x00;
+	vic.spr_mcolor1 = VCOL_DARK_GREY;
 
 	for(int i=0; i<8; i++)
 		vic.spr_color[i] = color;
@@ -59,6 +70,7 @@ void tovl_wait(void)
 	if (sprovlx[2] == 41)
 	{
 		vic.spr_enable = 0x00;
+		vic.spr_mcolor1 = VCOL_WHITE;
 
 		split_overlay_hide();	
 	}
