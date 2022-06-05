@@ -14,6 +14,9 @@
 #define UNIT_COMMAND		8
 #define UNIT_SCOUT_DRONE	9
 
+// Guard value
+#define UNIT_COMMAND_END	15
+
 #define UNIT_INFO_RANGE		0x0f
 #define UNIT_INFO_AIRBORNE	0x80
 
@@ -73,7 +76,7 @@ void unit_add(char type, char mx, char my, char id);
 
 bool unit_can_attack(char from, char to);
 
-int unit_attack_value(char from, char to);
+int unit_attack_value(char from, char to, bool defender);
 
 sbyte unit_find(byte type);
 

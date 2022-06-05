@@ -46,7 +46,7 @@ struct UnitInfo		UnitInfos[10] = {
 		0x05, 0x01,
 		{127, 24, 12, 6, 127, 127},
 		S"LIGHT TANK",
-		0x06, 0x82, 0x18
+		0x1c, 0x72, 0x18
 	},
 	{
 		0x86, 0x82,
@@ -55,10 +55,10 @@ struct UnitInfo		UnitInfos[10] = {
 		0x44, 0x45, 0x61
 	},
 	{
-		0x04, 0x01,
+		0x04, 0x02,
 		{127, 127, 48, 16, 127, 127},
 		S"HEAVY TANK",
-		0x1a, 0xc1, 0x15
+		0x1d, 0xd1, 0x15
 	},
 	{
 		0x05, 0x8b,
@@ -82,13 +82,13 @@ struct UnitInfo		UnitInfos[10] = {
 		0x04, 0xea,
 		{127, 127, 24, 16, 127, 127},
 		S"ARTILLERY",
-		0x0e, 0x60, 0x1e
+		0x0f, 0x60, 0x1e
 	},
 	{
 		0x02, 0x00,
 		{127, 127, 127, 127, 127, 127},
 		S"COMMAND",
-		0x00, 0x17, 0x00
+		0x00, 0x16, 0x00
 	},
 	{
 		0x87, 0x00,
@@ -167,7 +167,7 @@ bool unit_can_attack(char from, char to)
 	return false;
 }
 
-int unit_attack_value(char from, char to)
+int unit_attack_value(char from, char to, bool defender)
 {
 	__assume(from < 32);
 	__assume(to < 32);
@@ -177,8 +177,14 @@ int unit_attack_value(char from, char to)
 	UnitInfo	*	ui = UnitInfos + (u->type & UNIT_TYPE);
 	UnitInfo	*	eui = UnitInfos + (eu->type & UNIT_TYPE);
 
+	if ((ui->range & UNIT_INFO_SHOT_DELAY) && !(u->flags & UNIT_FLAG_RESTED))
+		return 0;
+
 	unsigned	maxr = hex_size_square(ui->range & UNIT_INFO_SHOT_RANGE);
 	unsigned	minr = hex_size_square(ui->range & UNIT_INFO_SHOT_MIN ? 2 : 1);
+
+	if (maxr > 2 && defender)
+		maxr = 2;
 
 	unsigned	dist = hex_dist_square(u->mx, u->my, eu->mx, eu->my);
 
@@ -194,7 +200,7 @@ int unit_attack_value(char from, char to)
 		{
 			unsigned	ns = ui->shots >> 4;
 
-			return damage * ns * u->count * 16 / ((2 + eu->count) * ((eui->armour & 0x0f) + 1));
+			return damage * ns * u->count * 16 / ((2 + eu->count) * ((eui->armour >> 4) + 1));
 		}
 	}
 

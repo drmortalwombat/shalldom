@@ -37,6 +37,9 @@ void terrain_pave_road(char px, char py, sbyte dx, sbyte dy, byte s)
 	
 	for(char i=0; i<s; i++)
 	{
+		__assume(px < 32);
+		__assume(py < 32);
+		
 		char ix = px;
 		char iy = (py + 1 - (px & 1)) >> 1;
 

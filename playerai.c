@@ -4,22 +4,6 @@
 #include "battle.h"
 #include <c64/vic.h>
 
-char * dbgstr = (char *)0x0400;
-
-void dbglog(const char * str)
-{
-	while (*str)
-		*dbgstr++ = *str++;
-	*dbgstr++ = ' ';
-}
-
-void dbglogi(int i)
-{
-	char	buffer[10];
-	itoa(i, buffer, 10);
-	dbglog(buffer);
-}
-
 AITask	*	AITasks;
 
 unsigned tsqrt(unsigned n)
@@ -88,6 +72,12 @@ int playerai_eval_move(byte unit, byte gx, byte gy, const AITask * task)
 	case AIS_STROLL:
 		value += 4096 - tsqrt(dd) * 32;
 		break;
+	}
+
+	if (UnitInfos[ua->type & UNIT_TYPE].range & UNIT_INFO_SHOT_DELAY)
+	{
+		if (ux != gx || uy != gy)
+			attscore >>= 2;
 	}
 
 	for(byte j=0; j<numUnits; j++)
@@ -230,11 +220,11 @@ void playerai_select_battles(byte team)
 				{
 					if (!(gridstate[ud->my][ud->mx] & GS_HIDDEN))
 					{
-						int	value = unit_attack_value(i, j);
+						int	value = unit_attack_value(i, j, false);
 
 						if (value > 0)
 						{
-							value -= unit_attack_value(j, i);
+							value -= unit_attack_value(j, i, true);
 
 							BattlePairs[battlePairs].from = i;
 							BattlePairs[battlePairs].to = j;
@@ -249,11 +239,13 @@ void playerai_select_battles(byte team)
 		}
 	}
 
+	// Hand out bonus for multi target
+
 	for(byte i=0; i<battlePairs; i++)
 		BattlePairs[i].value += 4 << tcnt[BattlePairs[i].to];
 
-	// Hand out bonus for multi target
-
+	// Now pick the best battles for each unit
+	
 	NumBattlePairs = 0;
 	while (NumBattlePairs < battlePairs)
 	{

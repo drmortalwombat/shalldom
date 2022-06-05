@@ -2,6 +2,7 @@
 #include "window.h"
 #include <c64/sprites.h>
 #include <audio/sidfx.h>
+#include <fixmath.h>
 #include "hexdisplay.h"
 
 
@@ -10,7 +11,7 @@ byte		NumBattlePairs;
 byte		Explosion;
 
 
-SIDFX	SIDFXExplosion[1] = {{
+const SIDFX	SIDFXExplosion[1] = {{
 	1000, 1000, 
 	SID_CTRL_GATE | SID_CTRL_NOISE,
 	SID_ATK_2 | SID_DKY_6,
@@ -20,7 +21,7 @@ SIDFX	SIDFXExplosion[1] = {{
 	5
 }};
 
-SIDFX	SIDFXShot[1] = {{
+const SIDFX	SIDFXShot[1] = {{
 	1400, 2048, 
 	SID_CTRL_GATE | SID_CTRL_RECT,
 	SID_ATK_2 | SID_DKY_6,
@@ -30,7 +31,7 @@ SIDFX	SIDFXShot[1] = {{
 	1
 }};
 
-SIDFX	SIDFXHit[1] = {{
+const SIDFX	SIDFXHit[1] = {{
 	2000, 1000, 
 	SID_CTRL_GATE | SID_CTRL_NOISE,
 	SID_ATK_2 | SID_DKY_6,
@@ -103,8 +104,10 @@ void battle_init_health(Battle * b, Combatand t)
 
 void battle_draw_health(Battle * b, Combatand t, byte i)
 {
-	char	h = b->health[t][i] >> 1;	
-	char	m = b->mhealth[t] >> 1;
+	__assume(i < 5);
+	
+	char	h = (b->health[t][i] + 1) >> 1;	
+	char	m = (b->mhealth[t] + 1) >> 1;
 
 	char	x = 8 + 36 * t;
 	char	y = 20 + 24 * i - m;
@@ -116,10 +119,10 @@ void battle_draw_health(Battle * b, Combatand t, byte i)
 char ground_agility[2][8] = 
 {
 	{
-		0, 0, 2, 0, 5, 12
+		0, 0, 2, 0, 4, 8
 	},
 	{
-		0, 0, 10, 5, 20, 30
+		0, 0, 5, 3, 10, 20
 	},
 };
 
@@ -143,6 +146,9 @@ void battle_init_shots(Battle * b)
 
 		unsigned	maxr = hex_size_square(ui->range & UNIT_INFO_SHOT_RANGE);
 		unsigned	minr = hex_size_square(ui->range & UNIT_INFO_SHOT_MIN ? 2 : 1);
+
+		if (maxr > hex_size_square(2) && t == CBT_DEFENDER)
+			maxr = hex_size_square(2);
 
 		byte			uexp = ((u->flags & UNIT_FLAG_EXPERIENCE) >> 5) + 2;
 		byte			agility = (ui->armour & UNIT_INFO_AGILITY) + 1;
@@ -278,6 +284,29 @@ void battle_enter_units(Battle * b, Combatand t, byte phase)
 
 #define SHOTS_IN_FLIGHT	4
 
+static inline unsigned umean(unsigned x, unsigned y)
+{
+	return (unsigned)(((unsigned long)x + (unsigned long)y) >> 1);	
+}
+
+char nhistory[256];
+char nhp;
+
+static unsigned rnorm(unsigned limit)
+{
+	unsigned l0 = rand();
+	unsigned l1 = rand();
+	unsigned l2 = rand();
+	unsigned l3 = rand();
+
+	return lmul16u(umean(umean(l0, l1), umean(l2, l3)), limit) >> 16;
+}
+
+static bool rnormhit(unsigned char accuracy, unsigned char agility)
+{
+	return rnorm(8 * accuracy) > agility + 3 * accuracy;
+}
+
 bool battle_fire(Battle * b)
 {
 	spr_show(7, false);
@@ -313,7 +342,7 @@ bool battle_fire(Battle * b)
 				byte	to = (b->shots[f] & BATTLE_SHOT_DST) >> 4;
 				Combatand	ti = (b->shots[f] & BATTLE_SHOT_COMBATAND) ? CBT_ATTACKER : CBT_DEFENDER;
 
-				if (rand() % b->accuracy[1 - ti] > rand() % b->agility[ti])
+				if (rnormhit(b->accuracy[1 - ti], b->agility[ti]))
 				{
 					if (b->health[ti][to] > b->damage[1 - ti])
 					{

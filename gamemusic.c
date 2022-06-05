@@ -1,6 +1,7 @@
 #include "gamemusic.h"
 
-#pragma region(main, 0x0a00, 0xa000, , , {code, data, bss, heap, stack} )
+#pragma region(main, 0x0900, 0x9c00, , , {code, data, bss, heap } )
+#pragma region(stack, 0x9c00, 0xa000, , , { stack } )
 
 #pragma section( music, 0)
 

@@ -2,44 +2,59 @@
 #include "splitscreen.h"
 #include <c64/vic.h>
 
+static char tovl_last;
+
 void tovl_show(const char * text, char color)
 {
+	char	mask = 0;
 	char	k = 0;
-	for(int i=0; i<3; i++)
+	for(char i=0; i<5; i++)
 	{
-		sprovlx[i] = 4 - 2 * i;
-		for(int j=0; j<8; j++)
-		{			
-			char c = text[k] & 0x3f;
-			if (c == ' ')
-			{
-				c = 0;
-				k++;
-			}
-			else if (c == '!')
-			{
-				c = 37;
-				k++;
-			}
-			else if (c == '?')
-			{
-				c = 38;
-				k++;
-			}
-			else if (c >= '0')
-			{
-				c -= 21;
-				k++;
-			}
-			else if (c != '\n')
-				k++;
-			else
-				c = 0;
+		sprovlx[i] = 8 - 2 * i;
+		sprovlc[i] = color;
 
-			c += 88;
+		if (text[k] != '\n')
+		{
+			for(char j=0; j<8; j++)
+			{			
+				char c = text[k];
+				if (c == ' ')
+				{
+					c = 0;
+					k++;
+				}
+				else if (c == '!')
+				{
+					c = 37;
+					k++;
+				}
+				else if (c == '?')
+				{
+					c = 38;
+					k++;
+				}
+				else if (c >= 'A')
+				{
+					c &= 0x3f;
+					k++;
+				}
+				else if (c >= '0')
+				{
+					c -= 21;
+					k++;
+				}
+				else
+					c = 0;
 
-			sprovlimg[i][j] = c;
+				c += 88;
+
+				sprovlimg[i][j] = c;
+			}
+			mask |= 1 << i;
 		}
+		if (!text[k])
+			break;
+		tovl_last = i;
 		k++;
 	}
 
@@ -49,25 +64,26 @@ void tovl_show(const char * text, char color)
 	vic.spr_expand_y = 0x00;
 	vic.spr_mcolor1 = VCOL_DARK_GREY;
 
-	for(int i=0; i<8; i++)
-		vic.spr_color[i] = color;
+	split_overlay_show(mask);
+}
 
-	split_overlay_show();
+void tovl_color(char line, char color)
+{
+	sprovlc[line] = color;
 }
 
 void tovl_hide(void)
 {
-	for(int i=0; i<3; i++)
-		sprovlx[i] = 25 - 2 * i;
-
+	for(int i=0; i<5; i++)
+		sprovlx[i] = 34 - 2 * i;
 }
 
 void tovl_wait(void)
 {
-	while (sprovlx[2] != 41 && sprovlx[2] != 20)
+	while (sprovlx[tovl_last] != 49 && sprovlx[tovl_last] != 25)
 		vic_waitFrame();
 
-	if (sprovlx[2] == 41)
+	if (sprovlx[tovl_last] == 49)
 	{
 		vic.spr_enable = 0x00;
 		vic.spr_mcolor1 = VCOL_WHITE;

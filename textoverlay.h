@@ -8,6 +8,8 @@ void tovl_hide(void);
 
 void tovl_wait(void);
 
+void tovl_color(char line, char color);
+
 #pragma compile("textoverlay.c")
 
 

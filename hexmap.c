@@ -32,8 +32,8 @@ unsigned hex_dist_square(byte xa, byte ya, byte xb, byte yb)
 Path		Paths[20];
 char		NumPaths;
 
-sbyte PathX[6] = {  0,  1,  1,  0, -1, -1};
-sbyte PathY[6] = { -2, -1,  1,  2,  1, -1};
+const sbyte PathX[6] = {  0,  1,  1,  0, -1, -1};
+const sbyte PathY[6] = { -2, -1,  1,  2,  1, -1};
 
 void hex_add_path(char unit)
 {

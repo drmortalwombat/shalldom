@@ -1,6 +1,18 @@
 
 #include "perlin.h"
 
+#pragma section( perlin, 0, , , bss)
+
+#pragma region( perlin, 0x0400, 0x0800, , , {perlin} )
+
+#pragma bss( perlin )
+
+static byte shuffle[256];
+
+#pragma align(shuffle, 256)
+
+#pragma bss(perlin)
+
 inline unsigned hashIntWard(unsigned k) 
 {
 	unsigned ks = k;
@@ -10,8 +22,6 @@ inline unsigned hashIntWard(unsigned k)
 	return ks;
 }
 
-static byte shuffle[256];
-
 // using 8 fractional bits
 
 int grad2(byte u, byte v, int x, int y) 
@@ -20,7 +30,7 @@ int grad2(byte u, byte v, int x, int y)
 	return x * ((int)(h & 127) - 64) + y * ((int)((h >> 8) & 127) - 64);
 }
 
-byte ir[32] = {
+static const byte ir[32] = {
 	0, 0, 1, 2, 4, 8, 12, 19,
 	27, 36, 46, 58, 70, 84, 98, 113,
 	128, 143, 158, 172, 186, 198, 210, 220,

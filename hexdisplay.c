@@ -20,10 +20,28 @@ byte gridunits[32][32];
 
 #pragma bss(bss)
 
+#pragma section( viewstate, 0, , , bss)
+
+#pragma region( viewstate, 0x0400, 0x0800, , , {viewstate} )
+
+#pragma bss( viewstate )
 
 byte viewstate[8][16];
 byte viewcolor[9][16];
 byte viewunits[8][16];
+
+static byte	spritemask[10][32];
+
+struct MoveNode
+{
+	byte	mx, my2;
+};
+
+MoveNode	moveNodes[64];
+byte		moveWrite, moveRead, moveCount;
+
+#pragma bss(viewstate)
+
 
 const char * TerrainNames[6] = 
 {
@@ -212,8 +230,6 @@ const byte TeamColors[2] = {
 	VCOL_CYAN, VCOL_RED,
 };
 
-
-static byte	spritemask[10][32];
 
 void grid_init_sprite(void)
 {
@@ -630,71 +646,63 @@ void drawBaseCell(byte cx, byte cy)
 
 void ghostBaseCell(byte cx, byte cy)
 {
-	byte * dp = hexhires[cy] + cx * 3 * 8;
+	__assume(cx < 16)
+
+	byte		*	dp = hexhires[cy] + cx * 3 * 8;
+	const byte	*	mp;
+	char			n;
 
 	if (cx & 1)
 	{
 		dp += 320;
-		const byte * mp = gmask1[0];
-		for(char i=0; i<4; i++)
-		{
-			for(char k=0; k<32; k+=2)
-			{
-				dp[k + 0] &= ~mp[k + 0] | 0xcc;
-				dp[(byte)(k + 1)] &= ~mp[(byte)(k + 1)] | 0x33;
-			}
-			dp += 320;
-			mp += 32;
-		}
+		mp = gmask1[0];
+		n = 4;
 	}
 	else
 	{
-		const byte * mp = gmask0[0];
-		for(char i=0; i<3; i++)
+		mp = gmask0[0];
+		n = 3;
+	}
+	for(char i=0; i<n; i++)
+	{
+		for(char k=0; k<32; k+=2)
 		{
-			for(char k=0; k<32; k+=2)
-			{
-				dp[k + 0] &= ~mp[k + 0] | 0xcc;
-				dp[(byte)(k + 1)] &= ~mp[(byte)(k + 1)] | 0x33;
-			}
-			dp += 320;
-			mp += 32;
-		}			
+			dp[k + 0] &= ~mp[k + 0] | 0xcc;
+			dp[(byte)(k + 1)] &= ~mp[(byte)(k + 1)] | 0x33;
+		}
+		dp += 320;
+		mp += 32;
 	}
 }
 
 void selectBaseCell(byte cx, byte cy)
 {
-	byte * dp = hexhires[cy] + cx * 3 * 8;
+	__assume(cx < 16)
+
+	byte		*	dp = hexhires[cy] + cx * 3 * 8;
+	const byte	*	mp;
+	char			n;
 
 	if (cx & 1)
 	{
 		dp += 320;
-		const byte * mp = gmask1[0];
-		for(char i=0; i<4; i++)
-		{
-			for(char k=0; k<32; k+=4)
-			{
-				dp[k + 0] |= mp[k + 0] & 0xcc;
-				dp[(byte)(k + 2)] |= mp[(byte)(k + 2)] & 0x33;
-			}
-			dp += 320;
-			mp += 32;
-		}
+		mp = gmask1[0];
+		n = 4;
 	}
 	else
 	{
-		const byte * mp = gmask0[0];
-		for(char i=0; i<3; i++)
+		mp = gmask0[0];
+		n = 3;
+	}
+	for(char i=0; i<n; i++)
+	{
+		for(char k=0; k<32; k+=4)
 		{
-			for(char k=0; k<32; k+=4)
-			{
-				dp[k + 0] |= mp[k + 0] & 0xcc;
-				dp[(byte)(k + 2)] |= mp[(byte)(k + 2)] & 0x33;
-			}
-			dp += 320;
-			mp += 32;
-		}			
+			dp[k + 0] |= mp[k + 0] & 0xcc;
+			dp[(byte)(k + 2)] |= mp[(byte)(k + 2)] & 0x33;
+		}
+		dp += 320;
+		mp += 32;
 	}
 }
 
@@ -864,6 +872,12 @@ void grid_blank(void)
 	memset(viewstate, 0x00, 128);
 	memset(viewunits, 0xff, 128);
 
+	for(char i=0; i<16; i++)
+	{
+		viewcolor[0][i] = BORDER_COLOR;
+		viewcolor[8][i] = BORDER_COLOR;
+	}
+
 	for(char cy=0; cy<8; cy++)
 	{
 		for(char cx=0; cx<13; cx++)
@@ -872,6 +886,7 @@ void grid_blank(void)
 				viewcolor[cy + 1][cx] = VCOL_LT_BLUE;
 		}
 	}
+
 }
 
 void grid_redraw_overlay(char cx, char cy)
@@ -1029,14 +1044,6 @@ void markThreatened(sbyte gx, sbyte gy2)
 	}
 }
 
-struct MoveNode
-{
-	byte	mx, my2;
-};
-
-MoveNode	moveNodes[64];
-byte		moveWrite, moveRead, moveCount;
-
 void markMovement(sbyte gx, sbyte gy2, sbyte dist, const byte * cost)
 {
 	if (gx >= 0 && gx < 32)
@@ -1129,6 +1136,9 @@ bool calcMovement(byte unit)
 bool calcAttack(byte unit)
 {
 	UnitInfo	*	info = UnitInfos + (units[unit].type & UNIT_TYPE);
+
+	if ((info->range & UNIT_INFO_SHOT_DELAY) && !(units[unit].flags & UNIT_FLAG_RESTED))
+		return false;
 
 	byte	team = units[unit].type & UNIT_TEAM;
 
@@ -1262,12 +1272,6 @@ void initDisplay(void)
 	vic.spr_mcolor0 = VCOL_BLACK;
 	vic.spr_mcolor1 = VCOL_WHITE;
 
-	for(char i=0; i<16; i++)
-	{
-		viewcolor[0][i] = BORDER_COLOR;
-		viewcolor[8][i] = BORDER_COLOR;
-	}
-
 	for(char i=0; i<32; i++)
 	{
 		gfield1[ 0][i] &= gmask1[ 0][i];
@@ -1279,6 +1283,4 @@ void initDisplay(void)
 		gfield0[ 4][i] &= gmask0[ 4][i];
 		gfield0[ 8][i] &= gmask0[ 8][i];
 	}
-
-	grid_init_sprite();
 }

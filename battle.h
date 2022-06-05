@@ -10,17 +10,19 @@ enum Combatand
 	CBT_COUNT
 };
 
+enum BattleShot {NUM_BATTLE_SHOTS = 64};
+
 // Slot 0 is attacker, slot 1 is defender
 struct Battle
 {
-	byte	units[2];
-	byte	damage[2];
-	byte	agility[2];
-	byte	accuracy[2];
-	byte	health[2][5];
-	byte	mhealth[2];
-	byte	shots[64];
-	byte	numShots, firedShots;
+	byte		units[2];
+	byte		damage[2];
+	byte		agility[2];
+	byte		accuracy[2];
+	byte		health[2][5];
+	byte		mhealth[2];
+	byte		shots[NUM_BATTLE_SHOTS];
+	BattleShot	numShots, firedShots;
 };
 
 #define BATTLE_SHOT_SRC			0x07

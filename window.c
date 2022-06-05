@@ -37,9 +37,17 @@ void window_color_rect(char x, char y, char w, char h, char color)
 	}
 }
 
+static inline char * winpos(char x, char y)
+{
+	__assume(x < 40);
+	__assume(y < 24);
+	
+	return winP + 8 * (40 * y + x);
+}
+
 void window_fill_rect(char x, char y, char w, char h, char pat)
 {
-	char	*	wp = winP + 8 * (40 * y + x);
+	char	*	wp = winpos(x, y);
 	char		bw = 8 * w;
 	
 	for(char i=0; i<h; i++)
@@ -69,8 +77,7 @@ void window_scroll(void)
 
 void window_write(char x, char y, const char * text)
 {
-	char	*	wp = winP + 8 * (40 * y + x);
-
+	char	*	wp = winpos(x, y);
 
 	char 	i = 0;
 	char	c = text[i];

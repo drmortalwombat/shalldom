@@ -21,8 +21,8 @@ struct Path
 extern Path		Paths[20];
 extern char		NumPaths;
 
-extern sbyte PathX[6];
-extern sbyte PathY[6];
+extern const sbyte PathX[6];
+extern const sbyte PathY[6];
 
 void hex_add_path(char unit);
 

@@ -31,7 +31,7 @@ const byte MovePhaseFlags[8] = {
 byte 	joybcount, SelectedUnit;
 bool	joyBlockMove;
 
-SIDFX	SIDFXDing[1] = {{
+const SIDFX	SIDFXDing[1] = {{
 	6400, 2048, 
 	SID_CTRL_GATE | SID_CTRL_RECT,
 	SID_ATK_2 | SID_DKY_6,
@@ -41,7 +41,7 @@ SIDFX	SIDFXDing[1] = {{
 	1
 }};
 
-SIDFX	SIDFXDing2[1] = {{
+const SIDFX	SIDFXDing2[1] = {{
 	3200, 2048, 
 	SID_CTRL_GATE | SID_CTRL_RECT,
 	SID_ATK_2 | SID_DKY_6,
@@ -51,7 +51,7 @@ SIDFX	SIDFXDing2[1] = {{
 	1
 }};
 
-SIDFX	SIDFXFail[1] = {{
+const SIDFX	SIDFXFail[1] = {{
 	800, 2048, 
 	SID_CTRL_GATE | SID_CTRL_RECT,
 	SID_ATK_2 | SID_DKY_6,
@@ -61,7 +61,7 @@ SIDFX	SIDFXFail[1] = {{
 	1
 }};
 
-SIDFX	SIDFXUndo[2] = {{
+const SIDFX	SIDFXUndo[2] = {{
 	3200, 2048, 
 	SID_CTRL_GATE | SID_CTRL_RECT,
 	SID_ATK_2 | SID_DKY_6,
@@ -79,7 +79,7 @@ SIDFX	SIDFXUndo[2] = {{
 	1
 }};
 
-SIDFX	SIDFXTankMove[1] = {{
+const SIDFX	SIDFXTankMove[1] = {{
 	800, 1000, 
 	SID_CTRL_GATE | SID_CTRL_NOISE,
 	SID_ATK_100 | SID_DKY_6,
@@ -89,7 +89,7 @@ SIDFX	SIDFXTankMove[1] = {{
 	2
 }};
 
-SIDFX	SIDFXChopperMove[3] = {{
+const SIDFX	SIDFXChopperMove[3] = {{
 	3200, 1000, 
 	SID_CTRL_GATE | SID_CTRL_NOISE,
 	SID_ATK_100 | SID_DKY_6,
@@ -115,7 +115,7 @@ SIDFX	SIDFXChopperMove[3] = {{
 	2
 }};
 
-SIDFX	SIDFXInfantryMove[4] = {{
+const SIDFX	SIDFXInfantryMove[4] = {{
 	2000, 1000, 
 	SID_CTRL_GATE | SID_CTRL_NOISE,
 	SID_ATK_2 | SID_DKY_6,
@@ -232,7 +232,6 @@ void game_show_overlay(void)
 		buffer[n++] = 'A';
 		buffer[n++] = 'Y';
 		buffer[n++] = 'S';
-		buffer[n++] = '\n';
 		buffer[n++] = 0;
 
 		tovl_show(buffer, TeamColors[(MovePhaseFlags[MovePhase] & MOVPHASE_TEAM) ? 1 : 0]);
@@ -635,18 +634,23 @@ void game_selecthex(void)
 
 void game_repairhex(void)
 {
-	byte	pflags = MovePhaseFlags[MovePhase];
-	byte 	team = pflags & MOVPHASE_TEAM;
-
-	if (gridstate[gridY][gridX] & GS_UNIT)
+	if (SelectedUnit == 0xff)
 	{
-		char ui = gridunits[gridY][gridX];
-		if ((units[ui].type & (UNIT_TEAM | UNIT_COMMANDED)) == team)
+		byte	pflags = MovePhaseFlags[MovePhase];
+		byte 	team = pflags & MOVPHASE_TEAM;
+
+		if (gridstate[gridY][gridX] & GS_UNIT)
 		{
-			units[ui].type |= UNIT_COMMANDED;
-			units[ui].flags |= UNIT_FLAG_REPAIR;
-			ghostUnit(ui);
-			updateBaseGrid();
+			char ui = gridunits[gridY][gridX];
+			if ((units[ui].type & (UNIT_TEAM | UNIT_COMMANDED)) == team)
+			{
+				units[ui].type |= UNIT_COMMANDED;
+				units[ui].flags |= UNIT_FLAG_REPAIR;
+				ghostUnit(ui);
+				updateBaseGrid();
+			}
+			else
+				sidfx_play_fail();
 		}
 		else
 			sidfx_play_fail();
@@ -657,33 +661,38 @@ void game_repairhex(void)
 
 void game_undohex(void)
 {
-	byte	pflags = MovePhaseFlags[MovePhase];
-	byte 	team = pflags & MOVPHASE_TEAM;
-
-	if (gridstate[gridY][gridX] & GS_UNIT)
+	if (SelectedUnit == 0xff)
 	{
-		char ui = gridunits[gridY][gridX];
-		if ((units[ui].type & (UNIT_TEAM | UNIT_COMMANDED)) == (team | UNIT_COMMANDED))
-		{
-			sidfx_play_undo();
+		byte	pflags = MovePhaseFlags[MovePhase];
+		byte 	team = pflags & MOVPHASE_TEAM;
 
-			units[ui].type &= ~UNIT_COMMANDED;
-			if (units[ui].flags & UNIT_FLAG_REPAIR)
+		if (gridstate[gridY][gridX] & GS_UNIT)
+		{
+			char ui = gridunits[gridY][gridX];
+			if ((units[ui].type & (UNIT_TEAM | UNIT_COMMANDED)) == (team | UNIT_COMMANDED))
 			{
-				units[ui].flags &= ~UNIT_FLAG_REPAIR;
-				ghostUnit(ui);
-			}
-			else if (pflags & MOVPHASE_ATTACK)
-			{
-				battle_cancel_pair(ui);
-				ghostUnit(ui);
+				sidfx_play_undo();
+
+				units[ui].type &= ~UNIT_COMMANDED;
+				if (units[ui].flags & UNIT_FLAG_REPAIR)
+				{
+					units[ui].flags &= ~UNIT_FLAG_REPAIR;
+					ghostUnit(ui);
+				}
+				else if (pflags & MOVPHASE_ATTACK)
+				{
+					battle_cancel_pair(ui);
+					ghostUnit(ui);
+				}
+				else
+				{
+					hex_cancel_path(ui);
+					moveUnit(ui, units[ui].tx, units[ui].ty);
+				}			
+				updateBaseGrid();
 			}
 			else
-			{
-				hex_cancel_path(ui);
-				moveUnit(ui, units[ui].tx, units[ui].ty);
-			}			
-			updateBaseGrid();
+				sidfx_play_fail();
 		}
 		else
 			sidfx_play_fail();
@@ -830,6 +839,135 @@ void game_show_map(void)
 	cursor_show();
 }
 
+void game_victory(void)
+{
+	music_init(1);
+
+	GamePhase = GP_VICTORY;
+
+	tovl_show("VICTORY!\nYOU WIN\nADVANCE?", TeamColors[0]);
+}
+
+void game_defeat(void)
+{
+	music_init(1);
+
+	GamePhase = GP_LOST;
+
+	tovl_show("DEFEAT!\nYOU LOST\n RETRY?", TeamColors[1]);
+}
+
+void game_restart(void)
+{
+	GamePhase = GP_INIT;
+}
+
+static const char MenuText[] = "CONTINUE\nHINT\nMUSIC\nRESTART\nRESIGN";
+
+static const char MenuColors[] = {
+	VCOL_ORANGE, VCOL_YELLOW, VCOL_WHITE, VCOL_YELLOW, 
+	VCOL_ORANGE, VCOL_RED, VCOL_BLACK, VCOL_ORANGE
+};
+
+enum GameMenuAction
+{
+	GSA_CONTINUE,
+	GSA_RESTART,
+	GSA_RESIGN
+};
+
+void game_menu(void)
+{
+	tovl_show(MenuText, VCOL_ORANGE);
+
+	char	menu = 0;
+	char	ma = 0;
+	GameMenuAction	action = GSA_CONTINUE;
+
+	while (true)
+	{
+		if (game_check_continue())
+		{
+			if (menu == 0)
+				break;			
+			else if (menu == 3)
+			{
+				action = GSA_RESTART;
+				break;
+			}
+			else if (menu == 4)
+			{
+				action = GSA_RESIGN;
+				break;
+			}
+		}
+
+		switch (keyb_codes[keyb_key & 0x7f])
+		{
+		case KEY_CSR_DOWN:
+			if (menu < 4)
+			{
+				tovl_color(menu, VCOL_ORANGE);
+				menu++;
+			}
+			break;
+		case KEY_CSR_UP:
+			if (menu > 0)
+			{
+				tovl_color(menu, VCOL_ORANGE);
+				menu--;
+			}
+			break;
+		}
+
+		if (joyy[0] > 0)
+		{
+			if (!joyBlockMove && menu < 4)
+			{
+				joyBlockMove = true;
+				tovl_color(menu, VCOL_ORANGE);
+				menu++;
+			}
+		}
+		else if (joyy[0] < 0)
+		{
+			if (!joyBlockMove && menu > 0)
+			{
+				joyBlockMove = true;
+				tovl_color(menu, VCOL_ORANGE);
+				menu--;
+			}
+		}
+		else
+			joyBlockMove = false;
+
+		tovl_color(menu, MenuColors[ma & 7]);
+		ma++;
+
+		vic_waitFrame();
+	}
+
+	tovl_hide();
+	tovl_wait();
+
+	cursor_show();
+
+	switch (action)
+	{
+		case GSA_CONTINUE:
+			break;
+
+		case GSA_RESTART:
+			game_restart();
+			break;
+
+		case GSA_RESIGN:
+			game_defeat();
+			break;
+
+	}
+}
+
 void game_input(void)
 {
 	byte	pflags = MovePhaseFlags[MovePhase];
@@ -904,7 +1042,10 @@ void game_input(void)
 			game_repairhex();				
 			break;
 		case JM_INFO:
+			joyBlockMove = true;
+			break;
 		case JM_MENU:
+			game_menu();
 			joyBlockMove = true;
 			break;
 		case JM_MAP:
@@ -979,6 +1120,10 @@ void game_input(void)
 		case 'e':
 			window_close();
 			break;
+
+		case KEY_ESC:
+			game_menu();
+			break;
 		}
 	}
 	else if (keyRepeatDelay == 0)
@@ -1029,24 +1174,6 @@ void game_loop_playing(void)
 	}
 	else
 		game_complete_phase();
-}
-
-void game_victory(void)
-{
-	music_init(1);
-
-	GamePhase = GP_VICTORY;
-
-	tovl_show("VICTORY!\nYOU WIN\nADVANCE?\n", TeamColors[0]);
-}
-
-void game_defeat(void)
-{
-	music_init(1);
-
-	GamePhase = GP_LOST;
-
-	tovl_show("DEFEAT!\nYOU LOST\n RETRY?\n", TeamColors[1]);
 }
 
 void game_loop(void)
