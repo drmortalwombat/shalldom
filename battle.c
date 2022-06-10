@@ -105,7 +105,7 @@ void battle_init_health(Battle * b, Combatand t)
 void battle_draw_health(Battle * b, Combatand t, byte i)
 {
 	__assume(i < 5);
-	
+
 	char	h = (b->health[t][i] + 1) >> 1;	
 	char	m = (b->mhealth[t] + 1) >> 1;
 
@@ -119,7 +119,7 @@ void battle_draw_health(Battle * b, Combatand t, byte i)
 char ground_agility[2][8] = 
 {
 	{
-		0, 0, 2, 0, 4, 8
+		0, 0, 2, 0, 4, 6
 	},
 	{
 		0, 0, 5, 3, 10, 20

@@ -719,7 +719,7 @@ void updateViewCell(char cx, char cy)
 		viewunits[cy][cx] = gunit;
 
 		bool	changed = (gstate ^ vstate) & GS_FLAGS;
-		if (vunit != gunit)
+		if ((gstate & GS_UNIT) != 0 && vunit != gunit)
 			changed = true;
 
 		if (changed)
@@ -741,7 +741,7 @@ void updateViewCell(char cx, char cy)
 }
 
 
-void grid_redraw_colors(void)
+void grid_redraw_all(void)
 {
 	for(char cy=0; cy<8; cy++)
 	{
@@ -753,6 +753,7 @@ void grid_redraw_colors(void)
 
 				viewcolor[cy + 1][cx] = TerrainColor[gstate & GS_TERRAINX];
 				viewunits[cy][cx] = 0xff;
+				
 			}
 		}
 	}
@@ -795,6 +796,7 @@ void updateColors(void)
 				char gstate = gridstate[cy + oy][cx + ox];
 
 				viewcolor[cy + 1][cx] = TerrainColor[gstate & GS_TERRAINX];
+				viewunits[cy][cx] = 0xff;
 			}
 		}
 	}
@@ -871,6 +873,7 @@ void grid_blank(void)
 {
 	memset(viewstate, 0x00, 128);
 	memset(viewunits, 0xff, 128);
+	memset(gridunits, 0xff, 32 * 32);
 
 	for(char i=0; i<16; i++)
 	{
@@ -971,6 +974,32 @@ void grid_redraw_rect(char x, char y, char w, char h)
 		grid_redraw_overlay(x, gy1 - 1);
 }
 
+void grid_redraw_colors(void)
+{
+	byte * cp = Screen;
+	const byte * cm = &(viewcolor[0][0]);
+
+	for(char y=0; y<8; y++)
+	{
+		putcr0(cm, cp);
+		cp += 40;
+		putcr1(cm, cp);
+		cp += 40;
+		putcr2(cm, cp);
+		cp += 40;
+	
+		cm += 16;
+	}	
+}
+
+void grid_color_hex(char x, char y, char c, bool update)
+{
+	viewcolor[y][x] = c;
+
+	if (update)
+		grid_redraw_colors();
+}
+
 void drawBaseGrid(void)
 {
 	grid_redraw_rect(0, 0, 40, 24);
@@ -1021,7 +1050,7 @@ byte markVisible(sbyte gx, sbyte gy2, byte m)
 			byte	gs = gridstate[gy][gx];
 			gs &= ~GS_HIDDEN;
 			gridstate[gy][gx] = gs;
-			if ((gs & GS_TERRAIN) >= GTERRAIN_FORREST)
+			if ((gs & GS_TERRAIN) == GTERRAIN_FORREST)
 				return m
 		}
 	}

@@ -49,7 +49,7 @@ int playerai_eval_move(byte unit, byte gx, byte gy, const AITask * task)
 		byte	terrain = gridstate[gy][gx] & GS_TERRAIN;
 		byte	dugin = 0;
 
-		if (UnitInfos[ua->type & UNIT_TYPE].armour & UNIT_INFO_DIG_IN)
+		if (ui->armour & UNIT_INFO_DIG_IN)
 		{
 			if (ux == gx && uy == gy)
 				dugin = 1;
@@ -74,7 +74,7 @@ int playerai_eval_move(byte unit, byte gx, byte gy, const AITask * task)
 		break;
 	}
 
-	if (UnitInfos[ua->type & UNIT_TYPE].range & UNIT_INFO_SHOT_DELAY)
+	if (ui->range & UNIT_INFO_SHOT_DELAY)
 	{
 		if (ux != gx || uy != gy)
 			attscore >>= 2;
@@ -245,7 +245,7 @@ void playerai_select_battles(byte team)
 		BattlePairs[i].value += 4 << tcnt[BattlePairs[i].to];
 
 	// Now pick the best battles for each unit
-	
+
 	NumBattlePairs = 0;
 	while (NumBattlePairs < battlePairs)
 	{
@@ -276,6 +276,10 @@ void playerai_select_battles(byte team)
 		{
 			if (BattlePairs[i].from != p.from)
 			{
+				// Don't fire too much on the same target
+				if (BattlePairs[i].to == p.to && maxv > 90)
+					BattlePairs[i].value >>= 1;
+
 				BattlePairs[np] = BattlePairs[i];
 				np++;
 			}

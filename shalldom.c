@@ -21,6 +21,7 @@
 #include "textoverlay.h"
 #include "levels.h"
 #include "gamemusic.h"
+#include "mainmenu.h"
 #include <audio/sidfx.h>
 
 int main(void)
@@ -30,7 +31,7 @@ int main(void)
 	__asm { sei }
 
 	// Turn display off
-	
+
 	vic.ctrl1 = VIC_CTRL1_BMM | VIC_CTRL1_ECM;
 
 	// Turn basic ROM off
@@ -44,13 +45,13 @@ int main(void)
 	drawBaseGrid();
 	status_init();
 
-	music_patch_voice3(false);
-	
 	split_init();
 
 	sid.fmodevol = 0x0f;
 
 	game_init();
+
+	mainmenu_open();
 
 	for(;;)
 	{

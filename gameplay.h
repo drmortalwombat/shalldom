@@ -22,6 +22,8 @@ enum MovePhases
 enum GamePhases
 {
 	GP_INIT,
+	GP_RESTART,
+	GP_READY,
 	GP_PLAYING,
 	GP_VICTORY,
 	GP_LOST

@@ -73,11 +73,15 @@ void updateBaseGrid(void);
 
 void updateGridCell(char x, char y);
 
-void grid_redraw_colors(void);
+void grid_redraw_all(void);
 
 void grid_redraw_rect(char x, char y, char w, char h);
 
 void grid_redraw_overlay(char x, char y);
+
+void grid_color_hex(char x, char y, char c, bool update);
+
+void grid_redraw_colors(void);
 
 void grid_blank(void);
 

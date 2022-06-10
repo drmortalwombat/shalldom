@@ -10,6 +10,7 @@
 #include "window.h"
 #include "playerai.h"
 #include "hexmap.h"
+#include "gamemusic.h"
 
 MovePhases MovePhase, NextPhase;
 
@@ -212,17 +213,21 @@ void game_show_overlay(void)
 		}
 		buffer[n++] = '\n';
 		char	d = GameDays;
+		char	e = '0'
 
 		if (d >= 20)
 		{
-			buffer[n++] = '2';
+			e += 2;
 			d -= 20;
 		}
-		else if (d >= 10)
+		if (d >= 10)
 		{
-			buffer[n++] = '1';
+			e += 1;
 			d -= 10;
 		}
+		
+		if (e != '0')
+			buffer[n++]	= e;
 		else
 			buffer[n++]	= ' ';
 
@@ -271,7 +276,7 @@ void game_begin_phase(void)
 			updateBaseGrid();
 	}
 	else
-		grid_redraw_colors();
+		grid_redraw_all();
 
 	char	color = TeamColors[team ? 1 : 0];
 
@@ -314,9 +319,9 @@ void game_execute_battles(void)
 		return;
 
 	if (MovePhaseFlags[MovePhase] & MOVPHASE_TEAM)
-		music_init(5);
+		music_init(TUNE_DEFEND);
 	else
-		music_init(4);
+		music_init(TUNE_ATTACK);
 
 	Battle	b;
 
@@ -395,7 +400,7 @@ void game_execute_battles(void)
 	unit_compact();
 	drawUnits();
 
-	music_init(0);
+	music_queue(TUNE_THEME_NEUTRAL);
 }
 
 void game_execute_repair(void)
@@ -841,7 +846,7 @@ void game_show_map(void)
 
 void game_victory(void)
 {
-	music_init(1);
+	music_init(TUNE_RESULT);
 
 	GamePhase = GP_VICTORY;
 
@@ -850,7 +855,7 @@ void game_victory(void)
 
 void game_defeat(void)
 {
-	music_init(1);
+	music_init(TUNE_RESULT);
 
 	GamePhase = GP_LOST;
 
@@ -859,7 +864,7 @@ void game_defeat(void)
 
 void game_restart(void)
 {
-	GamePhase = GP_INIT;
+	GamePhase = GP_RESTART;
 }
 
 static const char MenuText[] = "CONTINUE\nHINT\nMUSIC\nRESTART\nRESIGN";
@@ -1121,6 +1126,18 @@ void game_input(void)
 			window_close();
 			break;
 
+		case 'u':
+			updateColors();
+			break;
+
+		case 's':
+		{
+			for(char i=0; i<numUnits; i++)
+				units[i].type ^= UNIT_TEAM;
+			drawUnits();
+			break;
+		}
+
 		case KEY_ESC:
 			game_menu();
 			break;
@@ -1181,16 +1198,25 @@ void game_loop(void)
 	switch (GamePhase)
 	{
 		case GP_INIT:
+			level_setup(7);
 
+			GamePhase = GP_READY;
+			break;
+
+		case GP_RESTART:
+			level_restart(6);
+
+			GamePhase = GP_READY;
+			break;
+
+		case GP_READY:
 			MovePhase = MP_ATTACK_2;
 			NextPhase = MP_MOVE_1;
 			SelectedUnit = 0xff;
+
+			music_queue(TUNE_THEME_NEUTRAL);
+
 			GamePhase = GP_PLAYING;
-
-			music_init(0);
-
-			level_setup(0);
-
 			break;
 
 		case GP_PLAYING:

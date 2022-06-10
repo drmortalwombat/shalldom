@@ -5,7 +5,7 @@
 
 void terrain_build(unsigned seed);
 
-void terrain_pave_road(char px, char py, sbyte dx, sbyte dy, byte s);
+void terrain_patch(char px, char py, char dir, char len, char type);
 
 #pragma compile("terrain.c")
 

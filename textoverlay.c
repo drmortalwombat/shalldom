@@ -33,6 +33,11 @@ void tovl_show(const char * text, char color)
 					c = 38;
 					k++;
 				}
+				else if (c == '.')
+				{
+					c = 39;
+					k++;
+				}
 				else if (c >= 'A')
 				{
 					c &= 0x3f;
@@ -78,16 +83,25 @@ void tovl_hide(void)
 		sprovlx[i] = 34 - 2 * i;
 }
 
-void tovl_wait(void)
+void tovl_check(void)
 {
-	while (sprovlx[tovl_last] != 49 && sprovlx[tovl_last] != 25)
-		vic_waitFrame();
-
 	if (sprovlx[tovl_last] == 49)
 	{
 		vic.spr_enable = 0x00;
 		vic.spr_mcolor1 = VCOL_WHITE;
 
-		split_overlay_hide();	
+		split_overlay_hide();
+		tovl_last = 0xff;
+	}
+}
+
+void tovl_wait(void)
+{
+	if (tovl_last != 0xff)
+	{
+		while (sprovlx[tovl_last] != 49 && sprovlx[tovl_last] != 25)
+			vic_waitFrame();
+
+		tovl_check();
 	}
 }

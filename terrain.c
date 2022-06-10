@@ -31,19 +31,21 @@ void terrain_build(unsigned seed)
 	status_init();
 }
 
-void terrain_pave_road(char px, char py, sbyte dx, sbyte dy, byte s)
+void terrain_patch(char px, char py, char dir, char len, char type)
 {
+	sbyte	dx = PathX[dir], dy = PathY[dir];
+	
 	py *= 2;
 	
-	for(char i=0; i<s; i++)
+	for(char i=0; i<len; i++)
 	{
 		__assume(px < 32);
 		__assume(py < 32);
-		
+
 		char ix = px;
 		char iy = (py + 1 - (px & 1)) >> 1;
 
-		gridstate[iy][ix] = GTERRAIN_ROAD;
+		gridstate[iy][ix] = type;
 		px += dx;
 		py += dy;
 	}

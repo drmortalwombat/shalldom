@@ -56,7 +56,7 @@ void hex_add_path(char unit)
 		for(char i=0; i<6; i++)
 		{
 			sbyte	dx = x + PathX[i], dy = (y2 + PathY[i]) >> 1;
-			if (dx >= 0 && dx < 31 && dy >= 0 && dy < 31 && (gridstate[dy][dx] & GS_SELECT))
+			if (dx >= 0 && dx < 31 && dy >= 0 && dy < 32 && (gridstate[dy][dx] & GS_SELECT))
 			{
 				char	d = gridunits[dy][dx];
 				if (d > mind)

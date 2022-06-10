@@ -2,6 +2,7 @@
 #include "hexdisplay.h"
 #include <c64/vic.h>
 #include <audio/sidfx.h>
+#include "gamemusic.h"
 
 RIRQCode	rirqtop, rirqbottom, rirqsidfx, rirqfinal;
 RIRQCode	rirqoverlay[5];
@@ -56,22 +57,25 @@ __interrupt void split_overlay_irq(void)
 	int		x = sprovlpos[sprovlx[k]];
 	char	high = 0;
 
+	if (x < 320 + 24)
+	{
 #assign i 0
 #repeat
-//	for(char i=0; i<8; i++)
-	{
-		vic.spr_color[i] = c;
-		vic.spr_pos[i].y = y;
-		vic.spr_pos[i].x = x;
-		if (x & 0xff00)
-			high |= 1 << i;
-		Screen[0x3f8 + i] = sprovlimg[k][i];
-		x += 26;
-	}
+	//	for(char i=0; i<8; i++)
+		{
+			vic.spr_color[i] = c;
+			vic.spr_pos[i].y = y;
+			vic.spr_pos[i].x = x;
+			if (x & 0xff00)
+				high |= 1 << i;
+			Screen[0x3f8 + i] = sprovlimg[k][i];
+			x += 26;
+		}
 #assign i i + 1
 #until i == 8
 #undef i
-	vic.spr_msbx = high;
+		vic.spr_msbx = high;
+	}
 
 	if (sprovlx[k] != 25 && sprovlx[k] != 49)
 		sprovlx[k]++;
@@ -80,16 +84,12 @@ __interrupt void split_overlay_irq(void)
 __interrupt void split_sidfx_irq(void)
 {
 	sidfx_loop_2();
-	__asm {
-		jsr 0xa003
-	}
+	music_play();
 }
 
 __interrupt void split_music_irq(void)
 {
-	__asm {
-		jsr 0xa003
-	}
+	music_play();
 }
 
 void split_init(void)
@@ -140,19 +140,21 @@ void split_init(void)
 
 void split_overlay_show(char mask)
 {
+	vic_waitBottom();
+	rirq_wait();
 	for(int i=0; i<5; i++)
 	{
 		if (mask & (1 << i))
 			rirq_set(i + 4, 50 + 36 * i, rirqoverlay + i);
 	}
-	vic_waitBottom();
 	rirq_sort();
 }
 
 void split_overlay_hide(void)
 {
+	vic_waitBottom();
+	rirq_wait();
 	for(int i=0; i<5; i++)
 		rirq_clear(i + 4);
-	rirq_wait();
 	rirq_sort();
 }

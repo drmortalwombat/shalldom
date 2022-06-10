@@ -38,7 +38,7 @@
 struct UnitInfo		UnitInfos[10] = {
 	{
 		0x04, 0x01,
-		{127, 24, 16, 16, 48, 127},
+		{127, 24, 16, 16, 32, 48},
 		S"INFANTRY",
 		0x22, 0x2f, 0x4a
 	},
@@ -52,7 +52,7 @@ struct UnitInfo		UnitInfos[10] = {
 		0x86, 0x82,
 		{8, 8, 8, 8, 8, 8},
 		S"AIR CAVALRY",
-		0x44, 0x45, 0x61
+		0x44, 0x45, 0x63
 	},
 	{
 		0x04, 0x02,
@@ -70,13 +70,13 @@ struct UnitInfo		UnitInfos[10] = {
 		0x86, 0x81,
 		{8, 8, 8, 8, 8, 8},
 		S"BOMB SQUAD",
-		0x0f, 0x82, 0x12
+		0x0f, 0x50, 0x62
 	},
 	{
 		0x05, 0x02,
-		{16, 16, 16, 16, 127, 127},
+		{ 6, 6, 12, 12, 127, 127},
 		S"HOVERCRAFT",
-		0x26, 0x35, 0x42
+		0x26, 0x35, 0x44
 	},
 	{
 		0x04, 0xea,
@@ -199,8 +199,13 @@ int unit_attack_value(char from, char to, bool defender)
 		if (damage > 0)
 		{
 			unsigned	ns = ui->shots >> 4;
+			char		accuracy = (ui->shots & UNIT_INFO_ACCURACY) + 1;
+			char		agility = (eui->armour & UNIT_INFO_AGILITY) + 1;
 
-			return damage * ns * u->count * 16 / ((2 + eu->count) * ((eui->armour >> 4) + 1));
+			if (!(eui->view & UNIT_INFO_AIRBORNE))
+				agility += ground_agility[0][gridstate[eu->my][eu->mx] & GS_TERRAIN];
+
+			return damage * ns * u->count * 16 * accuracy / ((2 + eu->count) * ((eui->armour >> 4) + 1) * agility);
 		}
 	}
 
