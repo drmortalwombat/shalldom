@@ -886,7 +886,7 @@ void grid_blank(void)
 		for(char cx=0; cx<13; cx++)
 		{
 			if (cy < (char)(8 - (cx & 1)))
-				viewcolor[cy + 1][cx] = VCOL_LT_BLUE;
+				viewcolor[cy + 1][cx] = VCOL_MED_GREY;
 		}
 	}
 

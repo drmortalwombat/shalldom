@@ -40,7 +40,13 @@ void level_setup_cmd(const char * cmd, bool terrain)
 
 		while (cmd[0] != LEVEL_PATCH_END)
 		{
-			terrain_patch(cmd[0], cmd[1], cmd[2], cmd[3] & 0x1f, cmd[3] >> 5);
+			char	dir = cmd[2];
+
+			if (dir == 6)
+				terrain_patch_circle(cmd[0], cmd[1], cmd[3] & 0x1f, cmd[3] >> 5);
+			else
+				terrain_patch(cmd[0], cmd[1], dir, cmd[3] & 0x1f, cmd[3] >> 5);
+
 			cmd += 4;
 		}
 	}
@@ -91,7 +97,7 @@ void level_setup_cmd(const char * cmd, bool terrain)
 }
 
 // OVERTURE
-static const char level_data0[] = {
+static const char level_data_overture[] = {
 	LEVEL_SEED(36451),
 	LEVEL_DAYS(8),
 
@@ -124,7 +130,7 @@ static const char level_data0[] = {
 
 // ROAD TO
 // VICTORY
-static const char level_data1[] = {
+static const char level_data_road_to_victory[] = {
 	LEVEL_SEED(23893),
 	LEVEL_DAYS(14),
 
@@ -174,9 +180,9 @@ static const char level_data1[] = {
 
 // FIRE AND
 // RETREAT
-static const char level_data2[] = {
+static const char level_data_fire_and_retreat[] = {
 	LEVEL_SEED(9756),
-	LEVEL_DAYS(16),
+	LEVEL_DAYS(15),
 
 	LEVEL_PATCH( 7, 14,  1,  7, GTERRAIN_ROAD),
 	LEVEL_PATCH(14, 12,  1,  1, GTERRAIN_ROAD),
@@ -230,7 +236,7 @@ static const char level_data2[] = {
 
 // MOUNTAIN
 // FORTRESS
-static const char level_data3[] = {
+static const char level_data_mountain_fortress[] = {
 	LEVEL_SEED(23532),
 	LEVEL_DAYS(20),
 
@@ -276,9 +282,9 @@ static const char level_data3[] = {
 	LEVEL_AI_TASK(AIS_IDLE,   0,  0,  0, 0),	// 0
 };
 
-// RIDE O T
-// VALKYRIE
-static const char level_data4[] = {
+// VALKYRIE 
+// RIDE
+static const char level_data_valkyrie_ride[] = {
 	LEVEL_SEED(39127),
 	LEVEL_DAYS(20),
 
@@ -330,7 +336,7 @@ static const char level_data4[] = {
 };
 
 // SPECIAL FORCES
-static const char level_data5[] = {
+static const char level_data_special_forces[] = {
 	LEVEL_SEED(22455),
 	LEVEL_DAYS(24),
 
@@ -383,7 +389,7 @@ static const char level_data5[] = {
 
 // ISLAND
 // HOPPERS
-static const char level_data6[] = {
+static const char level_data_island_hoppers[] = {
 	LEVEL_SEED(64048),
 	LEVEL_DAYS(34),
 
@@ -447,7 +453,7 @@ static const char level_data6[] = {
 
 // ROLLING
 // THUNDER
-static const char level_data7[] = {
+static const char level_data_rolling_thunder[] = {
 	LEVEL_SEED(58381),
 	LEVEL_DAYS(24),
 
@@ -500,41 +506,356 @@ static const char level_data7[] = {
 	LEVEL_AI_TASK(AIS_STROLL, 1, 24,  9,  0),	// 2 -> 1
 };
 
-const LevelInfo	LevelInfos[10] =
+// VALLEY
+// OF DOOM
+static const char level_data_valley_of_doom[] = {
+	LEVEL_SEED(3585),
+	LEVEL_DAYS(24),
+
+	LEVEL_PATCH(  2, 15,  6,  3, GTERRAIN_ROAD),
+	LEVEL_PATCH( 21,  6,  6,  3, GTERRAIN_FORREST),
+	LEVEL_PATCH( 21,  3,  6,  2, GTERRAIN_BEACH),
+	LEVEL_PATCH( 21 , 1,  6,  2, GTERRAIN_BEACH),
+
+	LEVEL_PATCH(  5, 14,  2,  3, GTERRAIN_ROAD),
+	LEVEL_PATCH(  8, 16,  1,  3, GTERRAIN_ROAD),
+	LEVEL_PATCH( 11, 14,  2, 12, GTERRAIN_ROAD),
+	LEVEL_PATCH( 23, 19,  0,  9, GTERRAIN_ROAD),
+	LEVEL_PATCH( 22, 11,  5,  1, GTERRAIN_ROAD),
+	LEVEL_PATCH( 21, 10,  0, 11, GTERRAIN_ROAD),
+
+	LEVEL_PATCH_END,
+
+	LEVEL_UNIT(UNIT_CHOPPER,  1, 10, 0),
+	LEVEL_UNIT(UNIT_CHOPPER,  2, 10, 0),
+	LEVEL_UNIT(UNIT_CHOPPER,  2, 11, 0),
+
+	LEVEL_UNIT(UNIT_LIGHT_TANK,  4, 14, 0),
+	LEVEL_UNIT(UNIT_LIGHT_TANK,  5, 14, 0),
+	LEVEL_UNIT(UNIT_LIGHT_TANK,  4, 15, 0),
+	LEVEL_UNIT(UNIT_LIGHT_TANK,  5, 15, 0),
+
+	LEVEL_UNIT(UNIT_HEAVY_TANK,   2, 14, 0),
+	LEVEL_UNIT(UNIT_HEAVY_TANK,   3, 14, 0),
+	LEVEL_UNIT(UNIT_HEAVY_TANK,   3, 15, 0),
+	LEVEL_UNIT(UNIT_HEAVY_TANK,   2, 16, 0),
+
+	LEVEL_UNIT(UNIT_COMMAND_END,  2, 15, 0),
+
+	LEVEL_UNIT(UNIT_LIGHT_TANK, 14, 11, 0),
+	LEVEL_UNIT(UNIT_LIGHT_TANK, 10, 18, 0),
+
+	LEVEL_UNIT(UNIT_INFANTRY, 10, 17, 0),
+	LEVEL_UNIT(UNIT_INFANTRY, 20,  8, 0),
+	LEVEL_UNIT(UNIT_INFANTRY, 20, 20, 0),
+
+	LEVEL_UNIT(UNIT_SCOUT_DRONE, 21,  2, 0),
+
+	LEVEL_UNIT(UNIT_AIR_DEFENCE, 11, 14, 0),
+	LEVEL_UNIT(UNIT_HEAVY_TANK,  10, 14, 0),
+	LEVEL_UNIT(UNIT_HEAVY_TANK,  10, 15, 0),
+
+	LEVEL_UNIT(UNIT_AIR_DEFENCE, 23, 16, 0),
+	LEVEL_UNIT(UNIT_HEAVY_TANK,  21, 19, 0),
+
+	LEVEL_UNIT(UNIT_AIR_DEFENCE, 16,  2, 0),
+	LEVEL_UNIT(UNIT_AIR_DEFENCE, 19,  4, 0),
+	LEVEL_UNIT(UNIT_AIR_DEFENCE, 23,  3, 0),
+	LEVEL_UNIT(UNIT_AIR_DEFENCE, 22,  1, 0),
+
+	LEVEL_UNIT(UNIT_ARTILLERY,   11,  9, 0),
+	LEVEL_UNIT(UNIT_ARTILLERY,   13, 21, 0),
+	LEVEL_UNIT(UNIT_ARTILLERY,   29, 12, 0),
+	LEVEL_UNIT(UNIT_ARTILLERY,   17, 10, 0),
+
+	LEVEL_UNIT(UNIT_COMMAND_END, 21,  1, 0),
+
+	LEVEL_AI_TASK(AIS_IDLE,    0,  0,  0,  0),	// 0
+	LEVEL_AI_TASK(AIS_IDLE,    2,  0,  0, 10),	// 1 -> 2
+	LEVEL_AI_TASK(AIS_STROLL,  3,  7, 17,  0),	// 2 -> 3
+	LEVEL_AI_TASK(AIS_STROLL,  0,  1, 14,  0),	// 3 -> 0
+};
+
+
+// RIVER
+// BOAT
+static const char level_data_river_boat[] = {
+	LEVEL_SEED(24242),
+	LEVEL_DAYS(30),
+
+	LEVEL_PATCH( 11, 21,  6,  2, GTERRAIN_BEACH),
+	LEVEL_PATCH( 10, 20,  6,  2, GTERRAIN_FORREST),
+
+	LEVEL_PATCH_END,
+
+	LEVEL_UNIT(UNIT_HOVERCRAFT, 1,  2, 0),
+	LEVEL_UNIT(UNIT_HOVERCRAFT, 2,  3, 0),
+	LEVEL_UNIT(UNIT_HOVERCRAFT, 2,  4, 0),
+	LEVEL_UNIT(UNIT_HOVERCRAFT, 2,  5, 0),
+	LEVEL_UNIT(UNIT_HOVERCRAFT, 1,  5, 0),
+	LEVEL_UNIT(UNIT_HOVERCRAFT, 0,  6, 0),
+
+	LEVEL_UNIT(UNIT_COMMAND_END,  0,  4, 0),
+
+	LEVEL_UNIT(UNIT_SCOUT_DRONE, 1, 12, 2),
+	LEVEL_UNIT(UNIT_SCOUT_DRONE, 4, 15, 2),
+	LEVEL_UNIT(UNIT_SCOUT_DRONE, 9,  8, 2),
+
+	LEVEL_UNIT(UNIT_CHOPPER, 5, 21, 1),
+	LEVEL_UNIT(UNIT_CHOPPER, 6, 24, 1),
+	LEVEL_UNIT(UNIT_CHOPPER, 4, 24, 1),
+
+	LEVEL_UNIT(UNIT_CHOPPER, 25, 10, 7),
+	LEVEL_UNIT(UNIT_CHOPPER, 25, 11, 7),
+	LEVEL_UNIT(UNIT_CHOPPER, 25, 12, 7),
+
+	LEVEL_UNIT(UNIT_HOVERCRAFT, 18, 30, 3),
+	LEVEL_UNIT(UNIT_HOVERCRAFT, 19, 30, 3),
+	LEVEL_UNIT(UNIT_HOVERCRAFT, 20, 30, 3),
+
+	LEVEL_UNIT(UNIT_CHOPPER,  5, 27, 5),
+	LEVEL_UNIT(UNIT_CHOPPER,  5, 28, 5),
+	LEVEL_UNIT(UNIT_CHOPPER,  5, 29, 5),
+
+	LEVEL_UNIT(UNIT_HEAVY_TANK,  2, 27, 0),
+	LEVEL_UNIT(UNIT_HEAVY_TANK,  3, 27, 0),
+	LEVEL_UNIT(UNIT_HEAVY_TANK,  4, 29, 0),
+	LEVEL_UNIT(UNIT_HEAVY_TANK,  4, 30, 0),
+
+	LEVEL_UNIT(UNIT_COMMAND_END,  2, 29, 0),
+
+	LEVEL_AI_TASK(AIS_IDLE,    0,  0,  0,  0),	// 0
+
+	LEVEL_AI_TASK(AIS_IDLE,    2,  0,  0, 28),	// 1 -> 2
+	LEVEL_AI_TASK(AIS_STROLL,  0,  1,  7,  0),	// 2 -> 0
+
+	LEVEL_AI_TASK(AIS_IDLE,    4,  0,  0, 20),	// 3 -> 4
+	LEVEL_AI_TASK(AIS_STROLL,  2, 20, 14,  0),	// 4 -> 2
+
+	LEVEL_AI_TASK(AIS_IDLE,    6,  0,  0, 12),	// 5 -> 6
+	LEVEL_AI_TASK(AIS_STROLL,  4, 18, 26,  0),	// 6 -> 4
+
+	LEVEL_AI_TASK(AIS_IDLE,    2,  0,  0, 24),	// 7 -> 2
+};
+
+// ESCAPE A
+// SIEGE
+static const char level_data_escape_a_siege[] = {
+	LEVEL_SEED(50126),
+	LEVEL_DAYS(15),
+
+	LEVEL_PATCH( 10, 11,  6,  4, GTERRAIN_MOUNTAIN),
+	LEVEL_PATCH( 10, 11,  6,  3, GTERRAIN_ROAD),
+	LEVEL_PATCH( 23, 14,  2,  3, GTERRAIN_BEACH),
+
+	LEVEL_PATCH_END,
+
+	LEVEL_UNIT(UNIT_INFANTRY, 10, 10, 0),
+	LEVEL_UNIT(UNIT_INFANTRY, 11, 10, 0),
+	LEVEL_UNIT(UNIT_INFANTRY, 11, 11, 0),
+	LEVEL_UNIT(UNIT_INFANTRY, 10, 12, 0),
+	LEVEL_UNIT(UNIT_INFANTRY,  9, 11, 0),
+	LEVEL_UNIT(UNIT_INFANTRY,  9, 10, 0),
+
+	LEVEL_UNIT(UNIT_INFANTRY, 12, 10, 0),
+	LEVEL_UNIT(UNIT_INFANTRY, 12, 12, 0),
+	LEVEL_UNIT(UNIT_INFANTRY, 10, 13, 0),
+	LEVEL_UNIT(UNIT_INFANTRY,  8, 12, 0),
+	LEVEL_UNIT(UNIT_INFANTRY,  8, 10, 0),
+	LEVEL_UNIT(UNIT_INFANTRY, 10,  9, 0),
+
+	LEVEL_UNIT(UNIT_COMMAND_END, 10, 11, 0),
+
+	LEVEL_UNIT(UNIT_HEAVY_TANK,  6, 10, 1),
+	LEVEL_UNIT(UNIT_HEAVY_TANK,  9,  7, 1),
+	LEVEL_UNIT(UNIT_HEAVY_TANK, 13,  8, 1),
+	LEVEL_UNIT(UNIT_HEAVY_TANK, 14, 12, 1),
+	LEVEL_UNIT(UNIT_HEAVY_TANK, 13, 13, 1),
+	LEVEL_UNIT(UNIT_HEAVY_TANK, 11, 15, 1),
+	LEVEL_UNIT(UNIT_HEAVY_TANK,  8, 15, 1),
+	LEVEL_UNIT(UNIT_HEAVY_TANK,  7, 13, 1),
+	LEVEL_UNIT(UNIT_HEAVY_TANK,  5, 12, 1),
+
+	LEVEL_UNIT(UNIT_ARTILLERY,   26,  5, 2),
+	LEVEL_UNIT(UNIT_ARTILLERY,   25, 17, 2),
+	LEVEL_UNIT(UNIT_ARTILLERY,    0, 19, 4),
+	LEVEL_UNIT(UNIT_ARTILLERY,    0, 24, 4),
+
+	LEVEL_UNIT(UNIT_COMMAND_END, 27,  1, 0),
+
+	LEVEL_AI_TASK(AIS_IDLE,    0,  0,  0,  0),	// 0
+	LEVEL_AI_TASK(AIS_STROLL,  1, 10, 11,  0),	// 1 -> 1
+
+	LEVEL_AI_TASK(AIS_RUSH,  3, 23, 11,  0),	// 2 -> 3
+	LEVEL_AI_TASK(AIS_RUSH,  0, 15, 14,  0),	// 3 -> 0
+
+	LEVEL_AI_TASK(AIS_RUSH,  5,  7, 22,  0),	// 4 -> 5
+	LEVEL_AI_TASK(AIS_RUSH,  0, 10, 20,  0),	// 5 -> 0
+};
+
+// BAIT AND
+// SWITCH
+static const char level_data_bait_and_switch[] = {
+	LEVEL_SEED(23154),
+	LEVEL_DAYS(24),
+
+	LEVEL_PATCH( 19,  8,  1,  2, GTERRAIN_SEA),
+	LEVEL_PATCH( 14, 13,  6,  2, GTERRAIN_BEACH),
+	LEVEL_PATCH(  8, 18,  6,  2, GTERRAIN_BEACH),
+	LEVEL_PATCH( 16, 15,  6,  1, GTERRAIN_BEACH),
+	LEVEL_PATCH( 12, 20,  2,  2, GTERRAIN_BEACH),
+	LEVEL_PATCH( 14, 20,  6,  1, GTERRAIN_BEACH),
+
+	LEVEL_PATCH_END,
+
+	LEVEL_UNIT(UNIT_INFANTRY, 12, 16, 0),
+	LEVEL_UNIT(UNIT_INFANTRY, 13, 15, 0),
+	LEVEL_UNIT(UNIT_INFANTRY, 11, 16, 0),
+	LEVEL_UNIT(UNIT_INFANTRY, 12, 17, 0),
+
+	LEVEL_UNIT(UNIT_COMMAND_END, 19, 4, 0),
+
+	LEVEL_UNIT(UNIT_HEAVY_TANK, 15, 19, 0),
+	LEVEL_UNIT(UNIT_HEAVY_TANK, 16, 19, 0),
+	LEVEL_UNIT(UNIT_HEAVY_TANK, 16, 20, 0),
+	LEVEL_UNIT(UNIT_HEAVY_TANK, 17, 19, 0),
+
+	LEVEL_UNIT(UNIT_COMMAND_END, 17, 26, 0),
+
+	LEVEL_AI_TASK(AIS_IDLE,    0,  0,  0,  0),	// 0
+};
+
+// LIGHT
+// BRIGADE
+static const char level_data_light_brigade[] = {
+	LEVEL_SEED(17971),
+	LEVEL_DAYS(30),
+
+	LEVEL_PATCH( 28, 30,  5,  9, GTERRAIN_ROAD),
+	LEVEL_PATCH( 20, 25,  5,  4, GTERRAIN_ROAD),
+	LEVEL_PATCH( 17, 18,  3,  5, GTERRAIN_ROAD),
+	LEVEL_PATCH(  7,  1,  6,  2, GTERRAIN_MOUNTAIN),
+
+	LEVEL_PATCH_END,
+
+	LEVEL_UNIT(UNIT_LIGHT_TANK, 26, 28, 0),
+	LEVEL_UNIT(UNIT_LIGHT_TANK, 26, 29, 0),
+	LEVEL_UNIT(UNIT_LIGHT_TANK, 26, 30, 0),
+	LEVEL_UNIT(UNIT_LIGHT_TANK, 27, 27, 0),
+	LEVEL_UNIT(UNIT_LIGHT_TANK, 27, 28, 0),
+	LEVEL_UNIT(UNIT_LIGHT_TANK, 27, 29, 0),
+
+	LEVEL_UNIT(UNIT_ARTILLERY,   27, 30, 0),
+	LEVEL_UNIT(UNIT_ARTILLERY,   28, 29, 0),
+	LEVEL_UNIT(UNIT_COMMAND_END, 28, 30, 0),
+
+	LEVEL_UNIT(UNIT_HEAVY_TANK, 15, 22, 0),
+	LEVEL_UNIT(UNIT_HEAVY_TANK, 19, 18, 0),
+
+	LEVEL_UNIT(UNIT_HEAVY_TANK, 11, 13, 0),
+	LEVEL_UNIT(UNIT_HEAVY_TANK,  8, 12, 0),
+
+	LEVEL_UNIT(UNIT_ARTILLERY,   23,  5, 0),
+	LEVEL_UNIT(UNIT_ARTILLERY,   23,  6, 0),
+	LEVEL_UNIT(UNIT_ARTILLERY,   24, 15, 0),
+	LEVEL_UNIT(UNIT_ARTILLERY,   24, 16, 0),
+	LEVEL_UNIT(UNIT_ARTILLERY,    7, 16, 0),
+	LEVEL_UNIT(UNIT_ARTILLERY,    7, 17, 0),
+	LEVEL_UNIT(UNIT_ARTILLERY,    8, 25, 0),
+	LEVEL_UNIT(UNIT_ARTILLERY,    8, 26, 0),
+
+	LEVEL_UNIT(UNIT_COMMAND_END,  7, 1, 0),
+
+	LEVEL_AI_TASK(AIS_IDLE,    0,  0,  0,  0),	// 0
+};
+
+const LevelInfo	LevelInfos[NUM_LEVELS] =
 {
 	{
-		"OVERTURE", 
-		level_data0
+		"OVERTURE\n", 
+		level_data_overture,
+		"OVERTURE",
+		TUNE_INIT
 	},
 	{
 		"ROAD TO\nVICTORY", 
-		level_data1
+		level_data_road_to_victory,
+		"ABSTRACT",
+		TUNE_INIT
 	},
 	{
 		"FIRE AND\nRETREAT", 
-		level_data2
+		level_data_fire_and_retreat,
+		"TWIZZLED",
+		TUNE_INIT
 	},
 	{
 		"MOUNTAIN\nFORTRESS", 
-		level_data3
+		level_data_mountain_fortress,
+		"PICKWICK",
+		TUNE_INIT_JONNY
 	},
 	{
-		"RIDE O.T\nVALKIRYE", 
-		level_data4
+		"VALKIRYE\nRIDE", 
+		level_data_valkyrie_ride,
+		"LUNCHBOX",
+		TUNE_INIT_TOPGUN
 	},
 	{
 		"SPECIAL\nFORCES", 
-		level_data5
+		level_data_special_forces,
+		"JUMPSUIT",
+		TUNE_INIT
 	},
 	{
 		"ISLAND\nHOPPERS", 
-		level_data6
+		level_data_island_hoppers,
+		"BACKLINK",
+		TUNE_INIT
 	},
 	{
 		"ROLLING\nTHUNDER", 
-		level_data7
-	}
-}
+		level_data_rolling_thunder,
+		"BLUEJAYS",
+		TUNE_INIT_TOPGUN
+	},
+	{
+		"VALLEY\nOF DOOM", 
+		level_data_valley_of_doom,
+		"MOBILIZE",
+		TUNE_INIT_JONNY
+	},
+	{
+		"RIVER\nBOAT", 
+		level_data_river_boat,
+		"ARQUEBUS",
+		TUNE_INIT_BRITTANIA
+	},
+	{
+		"ESCAPE A\nSIEGE", 
+		level_data_escape_a_siege,
+		"MORIBUND",
+		TUNE_INIT_JONNY
+	},
+	{
+		"BAIT AND\nSWITCH", 
+		level_data_bait_and_switch,
+		"MORPHEUS",
+		TUNE_INIT
+	},
+	{
+		"LIGHT\nBRIGADE", 
+		level_data_light_brigade,
+		"BALACLAV",
+		TUNE_INIT_BRITTANIA
+	},
+};
+
+bool LevelUnlocked[NUM_LEVELS] = {
+	true, false, false, false, false,
+	false, false, false, false, false,
+	false
+};
 
 void level_complete_setup(void)
 {
@@ -581,7 +902,7 @@ void level_setup(char level)
 
 	music_patch_voice3(true);
 
-	music_init(TUNE_INIT_TOPGUN);
+	music_init(LevelInfos[level].tune);
 
 	drawBaseGrid();
 	status_init();
@@ -596,6 +917,4 @@ void level_setup(char level)
 	level_complete_setup();
 
 	tovl_wait();
-
-	music_patch_voice3(false);
 }

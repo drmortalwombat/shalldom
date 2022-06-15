@@ -78,6 +78,8 @@ bool unit_can_attack(char from, char to);
 
 int unit_attack_value(char from, char to, bool defender);
 
+void unit_showinfo(char unit, char y);
+
 sbyte unit_find(byte type);
 
 #pragma compile("units.c")

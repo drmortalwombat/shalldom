@@ -1,6 +1,7 @@
 #include "units.h"
 #include "hexdisplay.h"
 #include "hexmap.h"
+#include "window.h"
 
 
 // UnitInfo
@@ -183,8 +184,8 @@ int unit_attack_value(char from, char to, bool defender)
 	unsigned	maxr = hex_size_square(ui->range & UNIT_INFO_SHOT_RANGE);
 	unsigned	minr = hex_size_square(ui->range & UNIT_INFO_SHOT_MIN ? 2 : 1);
 
-	if (maxr > 2 && defender)
-		maxr = 2;
+	if (maxr > hex_size_square(2) && defender)
+		maxr = hex_size_square(2);
 
 	unsigned	dist = hex_dist_square(u->mx, u->my, eu->mx, eu->my);
 
@@ -221,4 +222,34 @@ sbyte unit_find(byte type)
 	}
 
 	return -1;
+}
+
+void unit_showinfo(char unit, char y)
+{
+	Unit		*	u = units + unit;
+	UnitInfo	*	ui = UnitInfos + (u->type & UNIT_TYPE);
+
+	window_write(2, y, ui->name); y += 2;
+
+	window_write(0, y, "VISIBILITY");    window_write_uint(15, y, ui->view & 0x0f); y++;
+	window_write(0, y, "DAMAGE GROUND"); window_write_uint(15, y, ui->damage & UNIT_INFO_DMG_GROUND); y++;
+	window_write(0, y, "DAMAGE AIR");    window_write_uint(15, y, ui->damage >> 4); y++;
+	window_write(0, y, "WEAPON RANGE");  window_write_uint(15, y, ui->range & UNIT_INFO_SHOT_RANGE); y++;
+	window_write(0, y, "ARMOUR");        window_write_uint(15, y, 2 * (ui->armour >> 4)); y++;
+
+	char		uexp = ((u->flags & UNIT_FLAG_EXPERIENCE) >> 5) + 2;
+	char		accuracy = (ui->shots & UNIT_INFO_ACCURACY) + 1;
+	char		agility = (ui->armour & UNIT_INFO_AGILITY) + 1;
+
+	if (!(ui->view & UNIT_INFO_AIRBORNE))
+	{
+		byte	dugin = 0;
+		if ((ui->armour & UNIT_INFO_DIG_IN) && (u->flags & UNIT_FLAG_RESTED))
+			dugin = 1;
+		agility += ground_agility[dugin][gridstate[u->my][u->mx] & GS_TERRAIN];
+	}
+
+	window_write(0, y, "AGILITY");    window_write_uint(15, y, agility * uexp); y++;
+	window_write(0, y, "ACCURACY");   window_write_uint(15, y, accuracy * uexp); y++;
+	window_write(0, y, "SHOTS");      window_write_uint(15, y, ui->shots >> 4); y++;
 }

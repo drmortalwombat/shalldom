@@ -4,6 +4,24 @@
 
 static char tovl_last;
 
+static char tovl_char(char c)
+{
+	if (c == ' ')
+		return 0 + 88;
+	else if (c == '!')
+		return 37 + 88;
+	else if (c == '?')
+		return 38 + 88;
+	else if (c == '.')
+		return 39 + 88;
+	else if (c >= 'A')
+		return (c & 0x3f) + 88;
+	else if (c >= '0')
+		return (c - 21) + 88;
+	else
+		return 0;
+}
+
 void tovl_show(const char * text, char color)
 {
 	char	mask = 0;
@@ -72,6 +90,21 @@ void tovl_show(const char * text, char color)
 	split_overlay_show(mask);
 }
 
+void tovl_text(char line, const char * text)
+{
+	char	i = 0;
+	while (text[i])
+	{
+		sprovlimg[line][i] = tovl_char(text[i]);
+		i++;
+	}
+	while (i < 8)
+	{
+		sprovlimg[line][i] = 0;
+		i++;		
+	}
+}
+
 void tovl_color(char line, char color)
 {
 	sprovlc[line] = color;
@@ -83,16 +116,22 @@ void tovl_hide(void)
 		sprovlx[i] = 34 - 2 * i;
 }
 
-void tovl_check(void)
+bool tovl_check(void)
 {
-	if (sprovlx[tovl_last] == 49)
+	if (tovl_last == 0xff)
+		return true;
+	else if (sprovlx[tovl_last] == 49)
 	{
 		vic.spr_enable = 0x00;
 		vic.spr_mcolor1 = VCOL_WHITE;
 
 		split_overlay_hide();
 		tovl_last = 0xff;
+
+		return true;
 	}
+	else
+		return sprovlx[tovl_last] == 25;
 }
 
 void tovl_wait(void)

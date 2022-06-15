@@ -111,8 +111,6 @@ void status_update_state(const char * state, byte color)
 		Color[24 * 40 + STATE_COL + i] = color;
 }
 
-const char nthnames[] = S"STNDRDTHTH";
-
 void status_update_unit(char unit)
 {
 	if (unit != 0xff)
@@ -120,8 +118,8 @@ void status_update_unit(char unit)
 		char division = units[unit].id & UNIT_ID_DIVISION;
 
 		Screen[24 * 40 + UNIT_COL + 0] = '1' + division;
-		if (division > 4)
-			division = 4;
+		if (division > 3)
+			division = 3;
 		Screen[24 * 40 + UNIT_COL + 1] = 0x3c + division;
 		const char * tp = UnitInfos[units[unit].type & UNIT_TYPE].name;
 		char i = 0;

@@ -11,6 +11,7 @@
 #include "playerai.h"
 #include "hexmap.h"
 #include "gamemusic.h"
+#include "levels.h"
 
 MovePhases MovePhase, NextPhase;
 
@@ -182,7 +183,7 @@ void sidfx_play_move(byte unit)
 
 void game_init(void)
 {
-	GamePhase = GP_INIT;
+	GamePhase = GP_TITLE;
 }
 
 static const char * PhaseOverlay[] = 
@@ -319,9 +320,9 @@ void game_execute_battles(void)
 		return;
 
 	if (MovePhaseFlags[MovePhase] & MOVPHASE_TEAM)
-		music_init(TUNE_DEFEND);
+		music_init(rand() & 1 ? TUNE_DEFEND_1 : TUNE_DEFEND_2);
 	else
-		music_init(TUNE_ATTACK);
+		music_init(rand() & 1 ? TUNE_ATTACK_1 : TUNE_ATTACK_2);
 
 	Battle	b;
 
@@ -483,13 +484,19 @@ void game_execute_moves(void)
 
 				state &= gridstate[y][x];
 
-				spr_show(3, !(state & GS_HIDDEN));
-
-				for(char j=0; j<16; j++)
+				bool visible = !(state & GS_HIDDEN);
+				if (visible)
 				{
-					spr_move(3, ux + ((tx - ux) * j >> 4), uy + ((ty - uy) * j >> 4));
-					vic_waitFrame();
+					spr_show(3, true);
+					for(char j=0; j<16; j++)
+					{
+						spr_move16(3, ux + ((tx - ux) * j >> 4), uy + ((ty - uy) * j >> 4));
+						vic_waitFrame();
+					}
 				}
+				else
+					spr_show(3, false);
+
 			} while (pi > 0);
 
 			moveUnit(ui, x, y);
@@ -736,6 +743,27 @@ bool game_check_continue(void)
 	return false;
 }
 
+void game_show_info(void)
+{
+	if (gridstate[gridY][gridX] & GS_UNIT)
+	{
+		char ui = gridunits[gridY][gridX];
+
+		cursor_hide();
+
+		window_open(4, 4, 18, 12);
+
+		unit_showinfo(ui, 0);
+
+		while (!game_check_continue())
+			vic_waitFrame();
+
+		window_close();
+
+		cursor_show();
+	}
+
+}
 
 void game_show_map(void)
 {
@@ -846,15 +874,26 @@ void game_show_map(void)
 
 void game_victory(void)
 {
+	music_patch_voice3(true);
+
 	music_init(TUNE_RESULT);
 
 	GamePhase = GP_VICTORY;
 
-	tovl_show("VICTORY!\nYOU WIN\nADVANCE?", TeamColors[0]);
+	char	buffer[50];
+	strcpy(buffer, "VICTORY!\nYOU WIN\n\nPASSCODE\n");
+	if (game_level + 1 < NUM_LEVELS)
+		strcat(buffer, LevelInfos[game_level + 1].passcode);
+
+	tovl_show(buffer, TeamColors[0]);
+	tovl_color(3, VCOL_MED_GREY);
+	tovl_color(4, VCOL_WHITE);
 }
 
 void game_defeat(void)
 {
+	music_patch_voice3(true);
+
 	music_init(TUNE_RESULT);
 
 	GamePhase = GP_LOST;
@@ -862,12 +901,12 @@ void game_defeat(void)
 	tovl_show("DEFEAT!\nYOU LOST\n RETRY?", TeamColors[1]);
 }
 
-void game_restart(void)
+void game_title(void)
 {
-	GamePhase = GP_RESTART;
+	GamePhase = GP_TITLE;
 }
 
-static const char MenuText[] = "CONTINUE\nHINT\nMUSIC\nRESTART\nRESIGN";
+static const char MenuText[] = "CONTINUE\nHINT\nMUSIC\nRESIGN\nTITLE";
 
 static const char MenuColors[] = {
 	VCOL_ORANGE, VCOL_YELLOW, VCOL_WHITE, VCOL_YELLOW, 
@@ -877,8 +916,8 @@ static const char MenuColors[] = {
 enum GameMenuAction
 {
 	GSA_CONTINUE,
-	GSA_RESTART,
-	GSA_RESIGN
+	GSA_RESIGN,
+	GSA_TITLE,
 };
 
 void game_menu(void)
@@ -897,12 +936,12 @@ void game_menu(void)
 				break;			
 			else if (menu == 3)
 			{
-				action = GSA_RESTART;
+				action = GSA_RESIGN;
 				break;
 			}
 			else if (menu == 4)
 			{
-				action = GSA_RESIGN;
+				action = GSA_TITLE;
 				break;
 			}
 		}
@@ -962,12 +1001,12 @@ void game_menu(void)
 		case GSA_CONTINUE:
 			break;
 
-		case GSA_RESTART:
-			game_restart();
-			break;
-
 		case GSA_RESIGN:
 			game_defeat();
+			break;
+
+		case GSA_TITLE:
+			game_title();
 			break;
 
 	}
@@ -1047,6 +1086,7 @@ void game_input(void)
 			game_repairhex();				
 			break;
 		case JM_INFO:
+			game_show_info();
 			joyBlockMove = true;
 			break;
 		case JM_MENU:
@@ -1096,6 +1136,10 @@ void game_input(void)
 			cursor_move( 24, 12 - 24 * (gridX & 1));
 			break;
 
+		case 'i':
+			game_show_info();
+			break;
+
 		case 'r':
 			game_repairhex();				
 			break;
@@ -1111,23 +1155,9 @@ void game_input(void)
 		case 'm':
 			game_show_map();
 			break;
-
-		case 'w':
-			window_open(4, 4, 13, 8);
-			window_write(0, 0, "HELLO WORLD");
-			window_write(0, 1, "2ND LINE");
-			break;
-
-		case 'a':
-			game_invoke_playerai();
-			break;			
-
-		case 'e':
-			window_close();
-			break;
-
-		case 'u':
-			updateColors();
+#if 0
+		case 'v':
+			game_victory();
 			break;
 
 		case 's':
@@ -1137,7 +1167,7 @@ void game_input(void)
 			drawUnits();
 			break;
 		}
-
+#endif
 		case KEY_ESC:
 			game_menu();
 			break;
@@ -1193,18 +1223,26 @@ void game_loop_playing(void)
 		game_complete_phase();
 }
 
+char game_level;
+
 void game_loop(void)
 {
 	switch (GamePhase)
 	{
+		case GP_TITLE:
+			mainmenu_open();
+
+			GamePhase = GP_INIT;
+			break;
+
 		case GP_INIT:
-			level_setup(7);
+			level_setup(game_level);
 
 			GamePhase = GP_READY;
 			break;
 
 		case GP_RESTART:
-			level_restart(6);
+			level_restart(game_level);
 
 			GamePhase = GP_READY;
 			break;
@@ -1213,6 +1251,10 @@ void game_loop(void)
 			MovePhase = MP_ATTACK_2;
 			NextPhase = MP_MOVE_1;
 			SelectedUnit = 0xff;
+			NumBattlePairs = 0;
+			NumPaths = 0;
+
+			music_patch_voice3(false);
 
 			music_queue(TUNE_THEME_NEUTRAL);
 
@@ -1232,6 +1274,7 @@ void game_loop(void)
 			{
 				tovl_hide();
 				tovl_wait();
+				game_level++;
 				GamePhase = GP_INIT;
 			}
 			break;
@@ -1241,7 +1284,7 @@ void game_loop(void)
 			{
 				tovl_hide();
 				tovl_wait();
-				GamePhase = GP_INIT;
+				GamePhase = GP_RESTART;
 			}
 			break;
 	}

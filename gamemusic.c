@@ -24,6 +24,9 @@ __export char music[] = {
 // 08 - Jets (maybe) - 0:38 - 62.5 BPM
 // 09 - Jets (Absolutely) - 0:32 - 75 BPM
 // 0A - Another level Prelude - 0:43 - 41.666... BPM
+// 0B - Rule Brittania - 0:31 - 53.57142852714 BPM
+// 0C - Attack (Player) 2 - 0:15 - 62.5 BPM
+// 0D - Attack [Enemy] 2 - 0:15 62.5 BPM
 
 #pragma data(data)
 
@@ -35,7 +38,7 @@ Tune		tune_queue, tune_current;
 
 unsigned music_lengths[] = {
 	TUNE_LENGTH(2, 33),
-	TUNE_LENGTH(2, 18),
+	TUNE_BPM(62.5, 1),
 	TUNE_LENGTH(1, 47),
 	TUNE_LENGTH(1, 32),
 
@@ -47,6 +50,10 @@ unsigned music_lengths[] = {
 	TUNE_LENGTH(0, 38),
 	TUNE_LENGTH(0, 32),
 	TUNE_LENGTH(0, 43),
+	TUNE_LENGTH(0, 31),
+
+	TUNE_BPM(62.5, 1),
+	TUNE_BPM(62.5, 1),
 };
 
 void music_init(Tune tune)

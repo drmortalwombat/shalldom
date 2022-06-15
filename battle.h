@@ -21,6 +21,7 @@ struct Battle
 	byte		accuracy[2];
 	byte		health[2][5];
 	byte		mhealth[2];
+	byte		anim;
 	byte		shots[NUM_BATTLE_SHOTS];
 	BattleShot	numShots, firedShots;
 };
@@ -29,6 +30,9 @@ struct Battle
 #define BATTLE_SHOT_COMBATAND	0x08
 #define BATTLE_SHOT_DST			0x70
 #define BATTLE_SHOT_FIRED		0x80
+
+#define BATTLE_ANIM_EXPLOSION	0x01
+#define BATTLE_ANIM_HIT			0x02
 
 struct BattlePair
 {

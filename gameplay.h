@@ -21,6 +21,7 @@ enum MovePhases
 
 enum GamePhases
 {
+	GP_TITLE,
 	GP_INIT,
 	GP_RESTART,
 	GP_READY,
@@ -41,6 +42,8 @@ extern MovePhases MovePhase;
 
 extern GamePhases GamePhase;
 extern char GameDays;
+extern char game_level;
+
 
 extern const char * PhaseNames[8];
 

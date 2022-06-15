@@ -256,7 +256,7 @@ void battle_enter_units(Battle * b, Combatand t, byte phase)
 				int ty = 60 + (winY + 3 * i) * 8;
 
 				spr_show(i + 3, true);
-				spr_move(i + 3, ux + ((tx - ux) * phase >> 4), uy + ((ty - uy) * phase >> 4));
+				spr_move16(i + 3, ux + ((tx - ux) * phase >> 4), uy + ((ty - uy) * phase >> 4));
 			}
 		}
 	}
@@ -309,8 +309,6 @@ static bool rnormhit(unsigned char accuracy, unsigned char agility)
 
 bool battle_fire(Battle * b)
 {
-	spr_show(7, false);
-
 	byte	f = b->firedShots;
 	if (f < b->numShots)
 	{
@@ -348,14 +346,17 @@ bool battle_fire(Battle * b)
 					{
 						b->health[ti][to] -= b->damage[1 - ti];
 						battle_draw_health(b, ti, to);
+						spr_set(7, true, 30 + (winX + 2 + 6 * ti) * 8, 54 + (winY + 3 * to) * 8, 48 + 13, VCOL_WHITE, false, false, false);
 						sidfx_play_hit();
+						b->anim = BATTLE_ANIM_HIT;
 					}
 					else if (b->health[ti][to] > 0)
 					{
 						b->health[ti][to] = 0;
 						window_clear_sprite(2 + 6 * ti, 24 * to, 0x55)
-						spr_set(7, true, 24 + (winX + 2 + 6 * ti) * 8, 50 + (winY + 3 * to) * 8, 80, 7, true, false, false);
+						spr_set(7, true, 24 + (winX + 2 + 6 * ti) * 8, 50 + (winY + 3 * to) * 8, 80, VCOL_YELLOW, true, false, false);
 						sidfx_play_explosion();
+						b->anim = BATTLE_ANIM_EXPLOSION;
 
 						if (!battle_num_units(b, ti) && b->numShots > b->firedShots)
 							b->numShots = b->firedShots;
@@ -369,6 +370,8 @@ bool battle_fire(Battle * b)
 
 	return b->firedShots < b->numShots + SHOTS_IN_FLIGHT;
 }
+
+static const char HitColors[] = {VCOL_WHITE, VCOL_YELLOW, VCOL_ORANGE, VCOL_LT_GREY, VCOL_MED_GREY, VCOL_DARK_GREY, VCOL_RED, VCOL_BLACK};
 
 bool battle_fire_animate(Battle * b, char phase)
 {
@@ -404,7 +407,16 @@ bool battle_fire_animate(Battle * b, char phase)
 		spr_show(si, false);
 		si++;
 	}
-	spr_image(7, 80 + phase);
+
+	if (b->anim & BATTLE_ANIM_EXPLOSION)
+		spr_image(7, 80 + phase);
+	else if (b->anim & BATTLE_ANIM_HIT)
+		spr_color(7, HitColors[phase]);
+	else
+		spr_show(7, false);
+
+	if (phase == 7)
+		b->anim = 0;
 }
 
 void battle_return_units(Battle * b, Combatand t)

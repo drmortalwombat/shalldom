@@ -34,7 +34,7 @@ void terrain_build(unsigned seed)
 void terrain_patch(char px, char py, char dir, char len, char type)
 {
 	sbyte	dx = PathX[dir], dy = PathY[dir];
-	
+
 	py *= 2;
 	
 	for(char i=0; i<len; i++)
@@ -51,3 +51,36 @@ void terrain_patch(char px, char py, char dir, char len, char type)
 	}
 }
 
+void terrain_patch_field(sbyte gx, sbyte gy2, char type)
+{
+	if (gx >= 0 && gx < 32)
+	{
+		sbyte	gy = gy2 >> 1;
+		if (gy >= 0 && gy < 32)
+		{
+			gridstate[gy][gx] = type;
+		}
+	}
+}
+
+
+void terrain_patch_circle(char px, char py, char rad, char type)
+{
+	sbyte ux = px, uy = py;
+	sbyte uy2 = uy * 2 + (ux & 1);
+
+	terrain_patch_field(ux, uy2, type);
+
+	for(byte s=1; s<rad; s++)
+	{
+		for(byte k=0; k<s; k++)
+		{
+			terrain_patch_field(ux + k,     uy2 - 2 * s + k, type);
+			terrain_patch_field(ux + s,     uy2 - s + 2 * k, type);
+			terrain_patch_field(ux + s - k, uy2 + s + k,     type);
+			terrain_patch_field(ux - k,     uy2 + 2 * s - k, type);
+			terrain_patch_field(ux - s,     uy2 + s - 2 * k, type);
+			terrain_patch_field(ux - s + k, uy2 - s - k,     type);
+		}
+	}
+}

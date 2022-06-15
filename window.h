@@ -17,7 +17,9 @@ void window_fill_rect(char x, char y, char w, char h, char pat);
 
 void window_scroll(void);
 
-void window_write(char x, char y, const char * text);
+char window_write(char x, char y, const char * text);
+
+char window_write_uint(char x, char y, unsigned u);
 
 void window_put_sprite(char x, char y, const char * sprite);
 

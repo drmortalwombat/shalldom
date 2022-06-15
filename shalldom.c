@@ -51,8 +51,6 @@ int main(void)
 
 	game_init();
 
-	mainmenu_open();
-
 	for(;;)
 	{
 		while (vic.ctrl1 & VIC_CTRL1_RST8) ;

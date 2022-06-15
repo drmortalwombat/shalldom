@@ -41,7 +41,7 @@ static inline char * winpos(char x, char y)
 {
 	__assume(x < 40);
 	__assume(y < 24);
-	
+
 	return winP + 8 * (40 * y + x);
 }
 
@@ -75,7 +75,7 @@ void window_scroll(void)
 		wp[x] = 0;
 }
 
-void window_write(char x, char y, const char * text)
+char window_write(char x, char y, const char * text)
 {
 	char	*	wp = winpos(x, y);
 
@@ -92,6 +92,15 @@ void window_write(char x, char y, const char * text)
 		i++;
 		c = text[i];
 	}
+
+	return x + i;
+}
+
+char window_write_uint(char x, char y, unsigned u)
+{
+	char	buffer[10];
+	utoa(u, buffer, 10);
+	return window_write(x, y, buffer);
 }
 
 static char cpad[] = {0x00, 0x55, 0xaa, 0xff};
