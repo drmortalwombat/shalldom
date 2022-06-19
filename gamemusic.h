@@ -25,6 +25,8 @@ void music_queue(Tune tune);
 
 void music_play(void);
 
+void music_toggle(void);
+
 void music_patch_voice3(bool enable);
 
 #pragma compile("gamemusic.c")

@@ -1,4 +1,6 @@
 #include "gamemusic.h"
+#include "splitscreen.h"
+#include <c64/sid.h>
 
 #pragma region(main, 0x0900, 0x9c00, , , {code, data, bss, heap } )
 #pragma region(stack, 0x9c00, 0xa000, , , { stack } )
@@ -32,6 +34,8 @@ __export char music[] = {
 
 unsigned	tune_count, tune_length;
 Tune		tune_queue, tune_current;
+char		music_throttle;
+bool		music_enabled;
 
 #define TUNE_LENGTH(m, s)	(100 * (60 * (m) + (s)))
 #define TUNE_BPM(bpm, s)	(unsigned)((s) * 60 / (bpm) * 100)
@@ -61,6 +65,7 @@ void music_init(Tune tune)
 	tune_queue = tune_current = tune;
 	tune_length = music_lengths[tune_current];
 	tune_count = 0;
+	music_enabled = true;
 
 	__asm
 	{
@@ -76,6 +81,19 @@ void music_queue(Tune tune)
 
 void music_play(void)
 {
+	if (!music_enabled)
+		return;
+
+	if (ntsc)
+	{
+		music_throttle++;
+		if (music_throttle == 6)
+		{
+			music_throttle = 0;
+			return;
+		}
+	}
+
 	tune_count++;
 	if (tune_count == tune_length)
 	{
@@ -105,3 +123,15 @@ void music_patch_voice3(bool enable)
 	*(char *)0xa14e = enable ? 0x20 : 0x4c;
 }
 
+void music_toggle(void)
+{
+	if (music_enabled)
+	{
+		music_enabled = false;
+		sid.voices[0].ctrl = 0;
+		sid.voices[1].ctrl = 0;
+		sid.voices[2].ctrl = 0;
+	}
+	else
+		music_enabled = true;
+}

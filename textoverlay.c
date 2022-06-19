@@ -75,9 +75,9 @@ void tovl_show(const char * text, char color)
 			}
 			mask |= 1 << i;
 		}
+		tovl_last = i;
 		if (!text[k])
 			break;
-		tovl_last = i;
 		k++;
 	}
 

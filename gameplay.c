@@ -47,7 +47,7 @@ const SIDFX	SIDFXDing2[1] = {{
 	3200, 2048, 
 	SID_CTRL_GATE | SID_CTRL_RECT,
 	SID_ATK_2 | SID_DKY_6,
-	0x40  | SID_DKY_204,
+	0x80  | SID_DKY_204,
 	0, 0,
 	2, 10,
 	1
@@ -57,7 +57,7 @@ const SIDFX	SIDFXFail[1] = {{
 	800, 2048, 
 	SID_CTRL_GATE | SID_CTRL_RECT,
 	SID_ATK_2 | SID_DKY_6,
-	0x50  | SID_DKY_300,
+	0x80  | SID_DKY_300,
 	0, 0,
 	2, 10,
 	1
@@ -67,7 +67,7 @@ const SIDFX	SIDFXUndo[2] = {{
 	3200, 2048, 
 	SID_CTRL_GATE | SID_CTRL_RECT,
 	SID_ATK_2 | SID_DKY_6,
-	0x40  | SID_DKY_204,
+	0x80  | SID_DKY_204,
 	200, 0,
 	8, 0,
 	1
@@ -75,7 +75,7 @@ const SIDFX	SIDFXUndo[2] = {{
 	3200, 2048, 
 	SID_CTRL_GATE | SID_CTRL_RECT,
 	SID_ATK_2 | SID_DKY_6,
-	0x40  | SID_DKY_204,
+	0x80  | SID_DKY_204,
 	-200, 0,
 	2, 10,
 	1
@@ -88,6 +88,26 @@ const SIDFX	SIDFXTankMove[1] = {{
 	0xf0  | SID_DKY_204,
 	-50, 0,
 	10, 0,
+	2
+}};
+
+const SIDFX	SIDFXHovercraftMove[1] = {{
+	800, 1000, 
+	SID_CTRL_GATE | SID_CTRL_RECT,
+	SID_ATK_100 | SID_DKY_6,
+	0xf0  | SID_DKY_204,
+	0, -80,
+	10, 0,
+	2
+}};
+
+const SIDFX	SIDFXBomberMove[1] = {{
+	500, 1000, 
+	SID_CTRL_GATE | SID_CTRL_NOISE,
+	SID_ATK_2 | SID_DKY_6,
+	0xf0  | SID_DKY_750,
+	0, 0,
+	14, 0,
 	2
 }};
 
@@ -114,6 +134,56 @@ const SIDFX	SIDFXChopperMove[3] = {{
 	0xf0  | SID_DKY_204,
 	-400, 0,
 	5, 1,
+	2
+}};
+
+const SIDFX	SIDFXDroneMove[6] = {{
+	6400, 1000, 
+	SID_CTRL_GATE | SID_CTRL_NOISE,
+	SID_ATK_68 | SID_DKY_6,
+	0xf0  | SID_DKY_204,
+	-800, 0,
+	2, 1,
+	2
+},{
+	6400, 1000, 
+	SID_CTRL_GATE | SID_CTRL_NOISE,
+	SID_ATK_68 | SID_DKY_6,
+	0xf0  | SID_DKY_204,
+	-800, 0,
+	2, 1,
+	2
+},{
+	6400, 1000, 
+	SID_CTRL_GATE | SID_CTRL_NOISE,
+	SID_ATK_68 | SID_DKY_6,
+	0xf0  | SID_DKY_204,
+	-800, 0,
+	2, 1,
+	2
+},{
+	6400, 1000, 
+	SID_CTRL_GATE | SID_CTRL_NOISE,
+	SID_ATK_68 | SID_DKY_6,
+	0xf0  | SID_DKY_204,
+	-800, 0,
+	2, 1,
+	2
+},{
+	6400, 1000, 
+	SID_CTRL_GATE | SID_CTRL_NOISE,
+	SID_ATK_68 | SID_DKY_6,
+	0xf0  | SID_DKY_204,
+	-800, 0,
+	2, 1,
+	2
+},{
+	6400, 1000, 
+	SID_CTRL_GATE | SID_CTRL_NOISE,
+	SID_ATK_68 | SID_DKY_6,
+	0xf0  | SID_DKY_204,
+	-800, 0,
+	2, 1,
 	2
 }};
 
@@ -177,6 +247,12 @@ void sidfx_play_move(byte unit)
 		sidfx_play(2, SIDFXInfantryMove, 4);	
 	else if (unit == UNIT_CHOPPER)
 		sidfx_play(2, SIDFXChopperMove, 3);	
+	else if (unit == UNIT_SCOUT_DRONE)
+		sidfx_play(2, SIDFXDroneMove, 6);	
+	else if (unit == UNIT_BOMBER)
+		sidfx_play(2, SIDFXBomberMove, 6);	
+	else if (unit == UNIT_HOVERCRAFT)
+		sidfx_play(2, SIDFXHovercraftMove, 1);	
 	else
 		sidfx_play(2, SIDFXTankMove, 1);	
 }
@@ -344,6 +420,8 @@ void game_execute_battles(void)
 
 			battle_init(&b, du);
 
+			sidfx_play_move(units[du].type & UNIT_TYPE);
+
 			for(char phase=0; phase<=16; phase++)
 			{
 				battle_enter_units(&b, CBT_DEFENDER, phase);
@@ -358,7 +436,11 @@ void game_execute_battles(void)
 
 					if (battle_num_units(&b, CBT_DEFENDER))
 					{
-						battle_begin_attack(&b, BattlePairs[bj].from);
+						byte	au = BattlePairs[bj].from;
+
+						battle_begin_attack(&b, au);
+
+						sidfx_play_move(units[au].type & UNIT_TYPE);
 
 						for(char phase=0; phase<=16; phase++)
 						{
@@ -401,7 +483,14 @@ void game_execute_battles(void)
 	unit_compact();
 	drawUnits();
 
-	music_queue(TUNE_THEME_NEUTRAL);
+	int score = level_eval_score();
+
+	if (score <= -400)
+		music_queue(TUNE_THEME_LOOSING);
+	else if (score >= 400)
+		music_queue(TUNE_THEME_WINNING);
+	else
+		music_queue(TUNE_THEME_NEUTRAL);
 }
 
 void game_execute_repair(void)
@@ -810,18 +899,22 @@ void game_show_map(void)
 		switch (keyb_codes[keyb_key & 0x7f])
 		{
 		case KEY_CSR_DOWN:
+		case 's':
 			sidfx_play_step();
 			ty += 4;
 			break;
 		case KEY_CSR_UP:
+		case 'w':
 			sidfx_play_step();
 			ty -= 4;
 			break;
 		case KEY_CSR_LEFT:
+		case 'a':
 			sidfx_play_step();
 			tx -= 4;
 			break;
 		case KEY_CSR_RIGHT:
+		case 'd':
 			sidfx_play_step();
 			tx += 4;
 			break;
@@ -918,7 +1011,24 @@ enum GameMenuAction
 	GSA_CONTINUE,
 	GSA_RESIGN,
 	GSA_TITLE,
+	GSA_HINT,
 };
+
+void game_hint(void)
+{
+	tovl_wait();
+
+	tovl_show(LevelInfos[game_level].hint, VCOL_LT_GREY);
+	tovl_wait();
+
+	while (!game_check_continue())
+		vic_waitFrame();
+
+	tovl_hide();
+	tovl_wait();
+
+	cursor_show();
+}
 
 void game_menu(void)
 {
@@ -933,7 +1043,17 @@ void game_menu(void)
 		if (game_check_continue())
 		{
 			if (menu == 0)
-				break;			
+				break;	
+			else if (menu == 1)
+			{
+				action = GSA_HINT;
+				break;
+			}			
+			else if (menu == 2)		
+			{
+				music_toggle();
+				break;
+			}
 			else if (menu == 3)
 			{
 				action = GSA_RESIGN;
@@ -999,6 +1119,10 @@ void game_menu(void)
 	switch (action)
 	{
 		case GSA_CONTINUE:
+			break;
+
+		case GSA_HINT:
+			game_hint();
 			break;
 
 		case GSA_RESIGN:
@@ -1120,18 +1244,22 @@ void game_input(void)
 			game_selecthex();
 			break;
 		case KEY_CSR_DOWN:
+		case 's':
 			sidfx_play_step();
 			cursor_move(0, 24);
 			break;
 		case KEY_CSR_UP:
+		case 'w':
 			sidfx_play_step();
 			cursor_move(0, -24);
 			break;
 		case KEY_CSR_LEFT:
+		case 'a':
 			sidfx_play_step();
 			cursor_move(-24, 12 - 24 * (gridX & 1));
 			break;
 		case KEY_CSR_RIGHT:
+		case 'd':
 			sidfx_play_step();
 			cursor_move( 24, 12 - 24 * (gridX & 1));
 			break;

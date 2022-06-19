@@ -51,7 +51,7 @@ struct Unit
 };
 
 extern Unit	units[32];
-extern byte numUnits;
+extern byte numUnits, numEntryUnits[2];
 
 
 #define UNIT_TYPE				0x1f
@@ -81,6 +81,10 @@ int unit_attack_value(char from, char to, bool defender);
 void unit_showinfo(char unit, char y);
 
 sbyte unit_find(byte type);
+
+void unit_init_score(void);
+
+int unit_eval_score(void);
 
 #pragma compile("units.c")
 

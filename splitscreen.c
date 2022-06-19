@@ -11,6 +11,8 @@ char sprovlc[5];
 char sprovlx[5];
 char sprovlimg[5][8];
 
+bool ntsc;
+
 #define xps		24 + 56
 
 static const int sprovlpos[50] = {
@@ -94,6 +96,17 @@ __interrupt void split_music_irq(void)
 
 void split_init(void)
 {
+	vic_waitTop();
+	vic_waitBottom();
+	char	max = 0;
+	while (vic.ctrl1 & VIC_CTRL1_RST8)
+	{
+		if (vic.raster > max)
+			max = vic.raster;
+	}
+
+	ntsc = max < 8;
+
 	rirq_init(false);
 
 	vic.ctrl1 = VIC_CTRL1_BMM | VIC_CTRL1_DEN | VIC_CTRL1_RSEL | 3;
