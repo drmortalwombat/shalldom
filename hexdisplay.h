@@ -43,8 +43,6 @@ void initDisplay(void);
 
 void overlay(byte cx, byte cy, byte si, byte c);
 
-void updateColors(void);
-
 void drawUnits(void);
 
 void moveUnit(byte unit, byte x, byte y);

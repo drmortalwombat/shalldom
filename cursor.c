@@ -14,7 +14,7 @@ void cursor_togrid(void)
 		gx = 0;
 	else if (gx > 31)
 		gx = 31;
-	gridX = gx
+	gridX = gx;
 
 	sbyte gy = (cursorY - 39 - 10 * (gridX & 1)) / 24;
 	if (gy < 0)

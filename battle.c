@@ -271,7 +271,7 @@ void battle_enter_units(Battle * b, Combatand t, byte phase)
 		{
 			if (b->health[t][i])
 			{
-				window_put_sprite(2 + 6 * t, y, sp)
+				window_put_sprite(2 + 6 * t, y, sp);
 				battle_draw_health(b, t, i);
 			}
 			y += 24;
@@ -353,7 +353,7 @@ bool battle_fire(Battle * b)
 					else if (b->health[ti][to] > 0)
 					{
 						b->health[ti][to] = 0;
-						window_clear_sprite(2 + 6 * ti, 24 * to, 0x55)
+						window_clear_sprite(2 + 6 * ti, 24 * to, 0x55);
 						spr_set(7, true, 24 + (winX + 2 + 6 * ti) * 8, 50 + (winY + 3 * to) * 8, 80, VCOL_YELLOW, true, false, false);
 						sidfx_play_explosion();
 						b->anim = BATTLE_ANIM_EXPLOSION;

@@ -571,7 +571,7 @@ void scroll(sbyte dx, sbyte dy)
 	{
 		ox = tx;
 		oy = ty;
-		updateColors();
+		grid_redraw_all();
 	}
 
 }
@@ -646,7 +646,7 @@ void drawBaseCell(byte cx, byte cy)
 
 void ghostBaseCell(byte cx, byte cy)
 {
-	__assume(cx < 16)
+	__assume(cx < 16);
 
 	byte		*	dp = hexhires[cy] + cx * 3 * 8;
 	const byte	*	mp;
@@ -677,7 +677,7 @@ void ghostBaseCell(byte cx, byte cy)
 
 void selectBaseCell(byte cx, byte cy)
 {
-	__assume(cx < 16)
+	__assume(cx < 16);
 
 	byte		*	dp = hexhires[cy] + cx * 3 * 8;
 	const byte	*	mp;
@@ -785,49 +785,6 @@ void grid_redraw_all(void)
 		updateViewCell(cx, 7);	
 }
 
-void updateColors(void)
-{
-	for(char cy=0; cy<8; cy++)
-	{
-		for(char cx=0; cx<13; cx++)
-		{
-			if (cy < (char)(8 - (cx & 1)))
-			{
-				char gstate = gridstate[cy + oy][cx + ox];
-
-				viewcolor[cy + 1][cx] = TerrainColor[gstate & GS_TERRAINX];
-				viewunits[cy][cx] = 0xff;
-			}
-		}
-	}
-
-	byte * cp = Screen;
-	const byte * cm = &(viewcolor[0][0]);
-
-	for(char y=0; y<8; y++)
-	{
-		const byte * cn = cm + 16;
-
-		putcr0(cm, cp);
-		cp += 40;
-		putcr1(cm, cp);
-		cp += 40;
-		putcr2(cm, cp);
-		cp += 40;
-	
-		if (y > 0)
-		{
-			for(char cx=0; cx<13; cx++)
-				updateViewCell(cx, y - 1);
-		}
-
-		cm = cn;
-	}
-
-	for(char cx=0; cx<13; cx++)
-		updateViewCell(cx, 7);
-}
-
 void updateGridCell(char x, char y)
 {
 	if (x >= ox && x < ox + 13 && y >= oy)
@@ -930,7 +887,7 @@ void grid_redraw_rect(char x, char y, char w, char h)
 			byte	*	dp = lp;
 
 			char rx = xm;
-			const byte * sp = gfield[ry * 6 + rx]
+			const byte * sp = gfield[ry * 6 + rx];
 
 			for(char x=0; x<w; x++)
 			{
@@ -1051,7 +1008,7 @@ byte markVisible(sbyte gx, sbyte gy2, byte m)
 			gs &= ~GS_HIDDEN;
 			gridstate[gy][gx] = gs;
 			if ((gs & GS_TERRAIN) == GTERRAIN_FORREST)
-				return m
+				return m;
 		}
 	}
 
@@ -1241,7 +1198,7 @@ void calcVisibility(byte team)
 			markVisible(ux, uy2, 0);
 
 			byte	range = info->view & UNIT_INFO_RANGE;
-			byte	airborne = info->view & UNIT_INFO_AIRBORNE ? 0 : 1
+			byte	airborne = info->view & UNIT_INFO_AIRBORNE ? 0 : 1;
 
 			for(byte s=1; s<range; s++)
 			{

@@ -290,7 +290,7 @@ void game_show_overlay(void)
 		}
 		buffer[n++] = '\n';
 		char	d = GameDays;
-		char	e = '0'
+		char	e = '0';
 
 		if (d >= 20)
 		{
@@ -947,7 +947,7 @@ void game_show_map(void)
 		oy = ty;
 		ox &= ~1;
 
-		updateColors();
+		grid_redraw_all();
 
 		if (gridX < ox + 2)
 			gridX = ox + 2;
@@ -1225,7 +1225,7 @@ void game_input(void)
 	}
 	else if (!joyBlockMove)
 	{
-		cursor_move(4 * joyx[0], 4 * joyy[0])
+		cursor_move(4 * joyx[0], 4 * joyy[0]);
 	}
 	else if (!(joyx[0] | joyy[0]))
 	{

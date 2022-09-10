@@ -147,7 +147,7 @@ void window_draw_quad_u(char x, char y)
 	or &= 0xcc;
 	
 
-	*wp = (*wp & and) | or wp++;
+	*wp = (*wp & and) | or; wp++;
 	*wp = (*wp & and) | or; wp++;
 	if (!((unsigned)wp & 7))
 		wp += 312;
@@ -289,7 +289,7 @@ void window_open(char x, char y, char w, char h)
 
 void window_close(void)
 {
-	grid_redraw_rect(winX - 1, winY - 1, winW + 2, winH + 2)
+	grid_redraw_rect(winX - 1, winY - 1, winW + 2, winH + 2);
 
 //	drawBaseGrid();
 //	updateColors();

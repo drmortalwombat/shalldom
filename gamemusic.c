@@ -2,8 +2,7 @@
 #include "splitscreen.h"
 #include <c64/sid.h>
 
-#pragma region(main, 0x0900, 0x9c00, , , {code, data, bss, heap } )
-#pragma region(stack, 0x9c00, 0xa000, , , { stack } )
+#pragma stacksize(1024)
 
 #pragma section( music, 0)
 
@@ -13,7 +12,7 @@
 
 __export char music[] = {
 	#embed 0x2000 0x88 "ArmyGame.sid" 
-}
+};
 
 // 00 - Game theme neutral - 2:33 - 62.5 BPM
 // 01 - Result - 2:18 - 62.5 BPM
@@ -35,7 +34,7 @@ __export char music[] = {
 unsigned	tune_count, tune_length;
 Tune		tune_queue, tune_current;
 char		music_throttle;
-bool		music_enabled;
+bool		music_enabled = true;
 
 #define TUNE_LENGTH(m, s)	(100 * (60 * (m) + (s)))
 #define TUNE_BPM(bpm, s)	(unsigned)((s) * 60 / (bpm) * 100)
@@ -65,7 +64,6 @@ void music_init(Tune tune)
 	tune_queue = tune_current = tune;
 	tune_length = music_lengths[tune_current];
 	tune_count = 0;
-	music_enabled = true;
 
 	__asm
 	{

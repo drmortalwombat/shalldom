@@ -38,7 +38,7 @@ const sbyte PathY[6] = { -2, -1,  1,  2,  1, -1};
 void hex_add_path(char unit)
 {
 	Path	*	path = Paths + NumPaths;
-	Unit	*	u = units + unit
+	Unit	*	u = units + unit;
 
 	path->ex = u->mx; path->ey = u->my;
 	path->sx = u->tx; path->sy = u->ty;
@@ -82,7 +82,7 @@ void hex_add_path(char unit)
 
 void hex_cancel_path(char unit)
 {
-	Unit	*	u = units + unit
+	Unit	*	u = units + unit;
 
 	char	i = 0;
 	while (i < NumPaths && (Paths[i].sx != u->tx || Paths[i].sy != u->ty))
@@ -93,7 +93,7 @@ void hex_cancel_path(char unit)
 		while (i < NumPaths)
 		{
 			Paths[i] = Paths[i + 1];
-			i++
+			i++;
 		}
 	}
 }

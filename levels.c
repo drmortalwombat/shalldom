@@ -1012,7 +1012,7 @@ void level_complete_setup(void)
 	calcVisibility(UNIT_TEAM_1);
 	calcThreatened(UNIT_TEAM_2);
 
-	updateColors();
+	grid_redraw_all();
 }
 
 void level_restart(char level)

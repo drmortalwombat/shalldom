@@ -1,0 +1,28 @@
+Shallow Domains
+
+Humans have advanced into the age of the 4th industrial revolution. AI and mechanical machinery once beleived to be a work of fiction, are now possible! This future tech is capable of acting, thinking and communicating just like humans! The advancement have come at a cost however and efforts are being made to impair this next level AI. 
+
+In the year 2172, a rogue piece of malware from an unknown vigilante has started to infect next level machinery and turn them against mankind and the uninfected.
+
+The government has entrusted you as the commander of their dwindling army. You must use your wits and will to destroy the enemy and take down their banner. Be warned, there's no safe options in this game, so best go in guns blazing!
+
+Shallow Domains is a turn based strategy game for the C64 that is played against an AI on a hexagonal map.  
+
+Features:
+
+* Six different types of terrain
+* Ten different types of units with a variety of stats, movement and weapons
+* Increased effectiveness for consistently used squads
+* Up to 32 squads per map 
+* 15 large maps, each providing a different challenge
+* A fog of war hiding areas of the map not visible to player or the AI
+* A minimap for quick navigation
+* Control using the joystick or keyboard
+* Playable in NTSC and PAL
+* Background and battle music
+
+Every battle fought between you and the defening squad includes just enough RNG to provide a unique playthrough everytime.  
+
+Eight character passcode allows you to keep your completed maps.
+
+Hexagons are the bestagons!

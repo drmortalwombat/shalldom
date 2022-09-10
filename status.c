@@ -74,7 +74,7 @@ void status_update_pos(char x, char y)
 	char type = gridstate[y][x];
 
 	char i = 0;
-	const char * tp = S"UNKNOWN"
+	const char * tp = S"UNKNOWN";
 	if (!(type & GS_HIDDEN))
 		tp = TerrainNames[type & GS_TERRAIN];
 

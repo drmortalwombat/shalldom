@@ -2,7 +2,7 @@
 #define LEVELS_H
 
 #include <c64/types.h>
-#include <gamemusic.h>
+#include "gamemusic.h"
 
 struct LevelInfo
 {

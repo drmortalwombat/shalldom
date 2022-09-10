@@ -38,9 +38,9 @@ static const char cammocenter[8] = {
 static const char * mainmenu_titles[4] = {
 		"SHALLOW\n"
 		" DOMAINS\n"
-		"  A C64\n"
-		"STRATEGY\n"
-		"  GAME",
+		"  WHERE\n"
+		"HEXAGONS\n"
+		"  RULE",
 
 		"CODE\n"
 		"DRMORTAL\n"
@@ -49,7 +49,9 @@ static const char * mainmenu_titles[4] = {
 		"  CRISPS\n",
 
 		"TESTERS\n"
-		"TBD...",
+		"ECTE\n"
+		"BIENO\n"
+		"SEPA",
 
 		"VISIT US\n"
 		"ON\n"

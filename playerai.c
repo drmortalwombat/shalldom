@@ -8,7 +8,7 @@ AITask	*	AITasks;
 
 unsigned tsqrt(unsigned n)
 {
-    unsigned p, q, r, h
+    unsigned p, q, r, h;
 
     p = 0;
     r = n;
