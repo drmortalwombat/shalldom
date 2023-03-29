@@ -33,6 +33,7 @@
 #define UNIT_INFO_SHOTS			0xf0
 #define UNIT_INFO_ACCURACY		0x0f
 
+// Compact unit info
 
 struct UnitInfo
 {
@@ -43,6 +44,8 @@ struct UnitInfo
 };
 
 extern struct UnitInfo		UnitInfos[10];
+
+// Units for both teams
 
 struct Unit
 {
@@ -70,12 +73,16 @@ extern byte numUnits, numEntryUnits[2];
 
 unsigned unit_distance_square(byte ua, byte ub);
 
+// Remove destroyed units from array
 void unit_compact(void);
 
+// Add a new unit to the array
 void unit_add(char type, char mx, char my, char id);
 
+// Check if from init can attack to unit
 bool unit_can_attack(char from, char to);
 
+// Calculate relative attack value when from attacks to
 int unit_attack_value(char from, char to, bool defender);
 
 void unit_showinfo(char unit, char y);

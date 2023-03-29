@@ -4,6 +4,7 @@
 #include <c64/types.h>
 #include "battle.h"
 
+// Split of one game day into eight phases
 enum MovePhases
 {
 	MP_ATTACK_1,
@@ -19,6 +20,7 @@ enum MovePhases
 	MP_MOVING_1
 };
 
+// Main game states
 enum GamePhases
 {
 	GP_TITLE,
@@ -30,6 +32,7 @@ enum GamePhases
 	GP_LOST
 };
 
+// Status bits for the move phases
 
 #define MOVPHASE_PLAYER			0x01
 #define MOVPHASE_INTERACTIVE	0x02

@@ -12,6 +12,8 @@
 
 #pragma bss( playfield )
 
+// Global grid state
+
 byte gridstate[32][32];
 byte gridunits[32][32];
 
@@ -26,12 +28,15 @@ byte gridunits[32][32];
 
 #pragma bss( viewstate )
 
+// On screen grid state
+
 byte viewstate[8][16];
 byte viewcolor[9][16];
 byte viewunits[8][16];
 
 static byte	spritemask[10][32];
 
+// Recorded move step in x and 2*y
 struct MoveNode
 {
 	byte	mx, my2;
@@ -230,7 +235,7 @@ const byte TeamColors[2] = {
 	VCOL_CYAN, VCOL_RED,
 };
 
-
+// Init mask for sprites for fast blit onto bitmap
 void grid_init_sprite(void)
 {
 	for(char si=0; si<10; si++)
@@ -257,10 +262,13 @@ void grid_init_sprite(void)
 	}
 }
 
+// Blit a sprite with the given color onto a hexagon
+
 void overlay(byte cx, byte cy, byte si, byte c)
 {
 	__assume(cx < 16);
 
+	// Prepare color ram
 	byte * cp = hexscreen[cy] + cx * 3;
 
 	if (cx & 1)
@@ -283,6 +291,7 @@ void overlay(byte cx, byte cy, byte si, byte c)
 	if (cx & 1)
 		dp += 638;
 
+	// Put pixel in place
 #if 1
 	const byte * sp = spritemask[si];
 
@@ -321,6 +330,7 @@ void overlay(byte cx, byte cy, byte si, byte c)
 
 #define BORDER_COLOR	0
 
+// Put first row of hexgon color tiles
 void putcr0(const byte * cm, byte * cp)
 {
 	byte c0 = BORDER_COLOR, c1 = BORDER_COLOR << 4, c2 = cm[16];
@@ -355,6 +365,7 @@ void putcr0(const byte * cm, byte * cp)
 	cp[3] = c3 | c2;
 }
 
+// Put second row of hexgon color tiles
 void putcr1(const byte * cm, byte * cp)
 {
 	byte c0 = BORDER_COLOR, c1 = BORDER_COLOR << 4, c2 = cm[16] << 4, c33 = BORDER_COLOR;
@@ -385,6 +396,7 @@ void putcr1(const byte * cm, byte * cp)
 	cp[3] = c2;
 }
 
+// Put third row of hexgon color tiles
 void putcr2(const byte * cm, byte * cp)
 {
 	byte c0 = BORDER_COLOR, c33 = BORDER_COLOR << 4, c2 = cm[16];
@@ -419,76 +431,7 @@ void putcr2(const byte * cm, byte * cp)
 	cp[3] = c35 | c2;
 }
 
-
-#if 0
-void putc(byte * cp, byte cx, byte cy, byte rx, byte ry)
-{	
-	char c;
-	char * cm = &(colormap[cy][cx - 1]);
-
-	if (ry == 0)
-	{
-		switch (rx)
-		{
-			case 0:
-				c = (cm[1] << 4) | cm[0];
-				break;				
-			case 1:
-			case 2:
-				c = cm[1] << 4;
-				break;
-			case 3:
-				c = (cm[1] << 4) | cm[2];
-				break;
-			case 4:
-			case 5:
-				c = cm[2] << 4;
-				break;
-		}
-	}
-	else if (ry == 1)
-	{
-		switch (rx)
-		{
-			case 0:
-				c = cm[0] << 4;
-				break;
-			case 1:
-			case 2:
-				c = (cm[1] << 4) | cm[33];
-				break;
-			case 3:
-			case 4:
-				c = cm[2] << 4;
-				break;
-
-		}
-	}
-	else
-	{
-		switch (rx)
-		{
-			case 0:
-				c = (cm[33] << 4) | cm[0];
-				break;				
-			case 1:
-			case 2:
-				c = cm[33] << 4;
-				break;
-			case 3:
-				c = (cm[33] << 4) | cm[2];
-				break;
-			case 4:
-			case 5:
-				c = cm[2] << 4;
-				break;
-		}
-	}
-
-	cp[0] = c;
-}
-#endif
-
+// Put all units onto the grid
 void drawUnits(void)
 {
 	for(char i=0; i<numUnits; i++)
@@ -496,8 +439,10 @@ void drawUnits(void)
 		char x = units[i].mx, y = units[i].my;		
 		char f = gridstate[y][x];
 
+		// Check if unit is still existing
 		if (units[i].count)
 		{
+			// Check for unit command status
 			f |= GS_UNIT;
 			if (units[i].type & UNIT_COMMANDED)
 				f |= GS_GHOST;
@@ -505,6 +450,7 @@ void drawUnits(void)
 		}
 		else
 		{
+			// Erase unit
 			f &= ~(GS_UNIT | GS_GHOST);
 			gridunits[y][x] = 0xff;
 		}
@@ -512,17 +458,21 @@ void drawUnits(void)
 	}
 }
 
+// Move unit on the grid
 void moveUnit(byte unit, byte x, byte y)
 {
 	char px = units[unit].mx, py = units[unit].my;
 	units[unit].mx = x; units[unit].my = y;
 
 
+	// Check if still marked as placed on grid
 	if (gridunits[py][px] == unit)
 	{
 		gridstate[py][px] &= ~(GS_UNIT | GS_GHOST);
 		gridunits[py][px] = 0xff;
 	}
+
+	// New position
 	char	f = gridstate[y][x];
 	f |= GS_UNIT;
 	if (units[unit].type & UNIT_COMMANDED)
@@ -532,6 +482,7 @@ void moveUnit(byte unit, byte x, byte y)
 
 }
 
+// Mark a unit as ghosted (commanded)
 void ghostUnit(byte unit)
 {
 	char px = units[unit].mx, py = units[unit].my;
@@ -543,6 +494,7 @@ void ghostUnit(byte unit)
 	gridstate[py][px] = f;	
 }
 
+// Hide a unit from the grid
 void hideUnit(byte unit)
 {
 	char px = units[unit].mx, py = units[unit].my;
@@ -553,11 +505,13 @@ void hideUnit(byte unit)
 	}
 }
 
+// Scroll the grid by the given number of hexagons
 void scroll(sbyte dx, sbyte dy)
 {
 	sbyte tx = ox + 2 * dx; 
 	sbyte ty = oy + dy;
 
+	// Check for map size
 	if (tx < 0)
 		tx = 0;
 	else if (tx > 18)
@@ -567,6 +521,7 @@ void scroll(sbyte dx, sbyte dy)
 	else if (ty > 24)
 		ty = 24;
 
+	// Redraw at new position if moved
 	if (tx != ox || ty != oy)
 	{
 		ox = tx;
@@ -576,13 +531,18 @@ void scroll(sbyte dx, sbyte dy)
 
 }
 
+// Scroll the map, such that the unit is visible
 void hex_scroll_into_view(byte unit)
 {
+	// Get unit position
 	char px = units[unit].mx, py = units[unit].my;
 
+	// Keep scrolling
 	for(;;)
-	{
+	{		
 		sbyte	dx = 0, dy = 0;
+
+		// Check for direction
 
 		if (px < ox + 2 && ox > 0)
 			dx = -1;
@@ -594,21 +554,24 @@ void hex_scroll_into_view(byte unit)
 		else if (py > oy + 6 && oy < 24)
 			dy = 1;
 
+		// Unit is on screen
 		if (dx == 0 && dy == 0)
 			return;
 
+		// Scroll
 		scroll(dx, dy);
 		vic_waitFrame();
 	}
 }
 
-
+// Draw the hires part of a hex cell
 void drawBaseCell(byte cx, byte cy)
 {
 	__assume(cx < 16);
 
 	byte * dp = hexhires[cy] + cx * 3 * 8;
 
+	// Two versions of the hexgon, shifted by half a cell
 	if (cx & 1)
 	{
 		dp += 320;
@@ -644,6 +607,7 @@ void drawBaseCell(byte cx, byte cy)
 	}
 }
 
+// Put a ghost checker on top of a hex cell
 void ghostBaseCell(byte cx, byte cy)
 {
 	__assume(cx < 16);
@@ -652,6 +616,7 @@ void ghostBaseCell(byte cx, byte cy)
 	const byte	*	mp;
 	char			n;
 
+	// Check for odd/even column
 	if (cx & 1)
 	{
 		dp += 320;
@@ -675,6 +640,7 @@ void ghostBaseCell(byte cx, byte cy)
 	}
 }
 
+// Mark a hex cell as selected
 void selectBaseCell(byte cx, byte cy)
 {
 	__assume(cx < 16);
@@ -683,6 +649,7 @@ void selectBaseCell(byte cx, byte cy)
 	const byte	*	mp;
 	char			n;
 
+	// Check for odd/even column
 	if (cx & 1)
 	{
 		dp += 320;
@@ -694,6 +661,7 @@ void selectBaseCell(byte cx, byte cy)
 		mp = gmask0[0];
 		n = 3;
 	}
+
 	for(char i=0; i<n; i++)
 	{
 		for(char k=0; k<32; k+=4)
@@ -706,32 +674,41 @@ void selectBaseCell(byte cx, byte cy)
 	}
 }
 
+// Update the visual state of a cell
 void updateViewCell(char cx, char cy)
 {
+	// Is hex cell visible ?
 	if (cy < (char)(8 - (cx & 1)))
 	{
+		// Get current state
 		char gstate = gridstate[cy + oy][cx + ox];
 		char vstate = viewstate[cy][cx];
 		viewstate[cy][cx] = gstate;
 
+		// Get unit on hex cell
 		char gunit = gridunits[cy + oy][cx + ox];
 		char vunit = viewunits[cy][cx];
 		viewunits[cy][cx] = gunit;
 
+		// Check for changes to the visual state
 		bool	changed = (gstate ^ vstate) & GS_FLAGS;
 		if ((gstate & GS_UNIT) != 0 && vunit != gunit)
 			changed = true;
 
+		// Only draw changed cells
 		if (changed)
 		{
+			// Cell has decorations, so clear
 			if (vstate & GS_FLAGS)
 				drawBaseCell(cx, cy);
 
+			// Draw unit
 			if ((gstate & GS_UNIT) && !(gstate & GS_HIDDEN))
 			{
 				overlay(cx, cy, units[gunit].type & UNIT_TYPE, units[gunit].type & UNIT_TEAM ? TeamColors[1] : TeamColors[0]);
 			}
 
+			// Draw decorations
 			if (gstate & GS_GHOST)
 				ghostBaseCell(cx, cy);
 			else if (gstate & GS_SELECT)
@@ -740,9 +717,10 @@ void updateViewCell(char cx, char cy)
 	}
 }
 
-
+// Redraw visible portion of the hex grid
 void grid_redraw_all(void)
 {
+	// Mark all cells as dirty
 	for(char cy=0; cy<8; cy++)
 	{
 		for(char cx=0; cx<13; cx++)
@@ -761,10 +739,13 @@ void grid_redraw_all(void)
 	byte * cp = Screen;
 	const byte * cm = &(viewcolor[0][0]);
 
+	// Loop over all rows, decorations are drawn one
+	// row delayed due to potential overlap
 	for(char y=0; y<8; y++)
 	{
 		const byte * cn = cm + 16;
 
+		// Colorize
 		putcr0(cm, cp);
 		cp += 40;
 		putcr1(cm, cp);
@@ -772,6 +753,7 @@ void grid_redraw_all(void)
 		putcr2(cm, cp);
 		cp += 40;
 	
+		// Check for decorations and units in previous row
 		if (y > 0)
 		{
 			for(char cx=0; cx<13; cx++)
@@ -781,10 +763,12 @@ void grid_redraw_all(void)
 		cm = cn;
 	}
 
+	// Check for decorations and units in final row
 	for(char cx=0; cx<13; cx++)
 		updateViewCell(cx, 7);	
 }
 
+// Update one hex cell
 void updateGridCell(char x, char y)
 {
 	if (x >= ox && x < ox + 13 && y >= oy)
@@ -793,6 +777,7 @@ void updateGridCell(char x, char y)
 	}
 }
 
+// Update all hex cells
 void updateBaseGrid(void)
 {
 	for(char cy=0; cy<8; cy++)
@@ -804,6 +789,7 @@ void updateBaseGrid(void)
 	}
 }
 
+// Fast division by 3
 const char div3[] = {
 	0, 0, 0,
 	1, 1, 1,
@@ -816,6 +802,7 @@ const char div3[] = {
 	8, 8, 8
 };
 
+// Fast modulus by 6
 const char mod6[] = {
 	0, 1, 2, 3, 4, 5,
 	0, 1, 2, 3, 4, 5,
@@ -826,6 +813,7 @@ const char mod6[] = {
 	0, 1, 2, 3, 4, 5,	
 };
 
+// Clear the grid
 void grid_blank(void)
 {
 	memset(viewstate, 0x00, 128);
@@ -849,6 +837,7 @@ void grid_blank(void)
 
 }
 
+// Redraw overlay and decoration of one cell
 void grid_redraw_overlay(char cx, char cy)
 {
 	if (cy < (char)(8 - (cx & 1)))
@@ -869,6 +858,7 @@ void grid_redraw_overlay(char cx, char cy)
 	}
 }
 
+// Redraw rectangular portion of the screen
 void grid_redraw_rect(char x, char y, char w, char h)
 {
 	char gy0 = div3[y], gy1 = div3[y + h + 2];
@@ -931,6 +921,7 @@ void grid_redraw_rect(char x, char y, char w, char h)
 		grid_redraw_overlay(x, gy1 - 1);
 }
 
+// Redraw all colors on screen
 void grid_redraw_colors(void)
 {
 	byte * cp = Screen;
@@ -987,6 +978,7 @@ void drawBaseGrid(void)
 	}
 #endif
 #if 1
+	// Make bottom line black to mask vblank irq
 	byte * dp = Hires + 23 * 320;
 	for(char x=0; x<40; x++)
 	{
@@ -995,6 +987,9 @@ void drawBaseGrid(void)
 	}
 #endif
 }
+
+// Mark a cell as visible, and return m if this was a
+// forrest tile, that blocks further view
 
 byte markVisible(sbyte gx, sbyte gy2, byte m)
 {
@@ -1015,9 +1010,9 @@ byte markVisible(sbyte gx, sbyte gy2, byte m)
 	return 0;
 }
 
+// Mark a cell as threatened by a unit (blocks movement)
 void markThreatened(sbyte gx, sbyte gy2)
 {
-
 	if (gx >= 0 && gx < 32)
 	{
 		sbyte	gy = gy2 >> 1;
@@ -1030,8 +1025,12 @@ void markThreatened(sbyte gx, sbyte gy2)
 	}
 }
 
+// Mark a cell as potential movement target, with the remaining
+// movement points based on the type of cell and cost function
+
 void markMovement(sbyte gx, sbyte gy2, sbyte dist, const byte * cost)
 {
+	// Clip to map
 	if (gx >= 0 && gx < 32)
 	{
 		if (gy2 >= 0 && gy2 < 64)
@@ -1040,30 +1039,38 @@ void markMovement(sbyte gx, sbyte gy2, sbyte dist, const byte * cost)
 
 			byte	gs = gridstate[iy][ix];
 
+			// Check if tile is invisivle or already occupied
 			if (gs & (GS_HIDDEN | GS_UNIT))
 				return;
 			
+			// Check if terrain prevents movement, or already moved too far
 			byte	gt = gs & GS_TERRAIN;			
 			dist -= cost[gt];
 			if (dist < 0)
 				return;
 
+			// Cannot run over threatened fields
 			if (gs & GS_THREATENED)
 				dist = 0;
 
+			// Can already reach it?
 			if (gs & GS_SELECT)
 			{
+				// Check if new path is cheaper
 				if ((byte)dist > gridunits[iy][ix])
 					gridunits[iy][ix] = dist;
 			}
 			else
 			{
+				// Mark cell as reachable
 				gridstate[iy][ix] = gs | GS_SELECT;
 				gridunits[iy][ix] = dist;
 				moveCount++;
 			
 				if (dist > 0)
 				{
+					// If there is movement left, keep this cell as
+					// seed for more steps
 					moveNodes[moveWrite].mx = gx;
 					moveNodes[moveWrite].my2 = gy2;
 					moveWrite = (moveWrite + 1) & 63;
@@ -1073,13 +1080,15 @@ void markMovement(sbyte gx, sbyte gy2, sbyte dist, const byte * cost)
 	}
 }
 
-
+// Reset movment flag in grid
 void resetMovement(void)
 {
 	for(char y=0; y<32; y++)
 		for(char x=0; x<32; x++)
 			gridstate[y][x] &= ~GS_SELECT;		
 }
+
+// Mark potential movment targets for the given unut
 
 bool calcMovement(byte unit)
 {
@@ -1090,6 +1099,7 @@ bool calcMovement(byte unit)
 	sbyte ux = units[unit].mx, uy = units[unit].my;
 	sbyte uy2 = uy * 2 + (ux & 1);
 
+	// Seed initial hex field
 	moveNodes[0].mx = ux;
 	moveNodes[0].my2 = uy2;
 	gridunits[uy][ux] = 48;
@@ -1098,6 +1108,7 @@ bool calcMovement(byte unit)
 	moveRead = 0;
 	moveCount = 0;
 
+	// While there is movement left
 	while (moveRead != moveWrite)
 	{
 		sbyte gx = moveNodes[moveRead].mx;
@@ -1105,6 +1116,7 @@ bool calcMovement(byte unit)
 		sbyte dist = gridunits[gy2 >> 1][gx];
 		moveRead = (moveRead + 1) & 63;
 
+		// Check all six possible directions
 		markMovement(gx - 1, gy2 - 1, dist, cost);
 		markMovement(gx - 1, gy2 + 1, dist, cost);
 		markMovement(gx,     gy2 - 2, dist, cost);
@@ -1114,15 +1126,19 @@ bool calcMovement(byte unit)
 
 	}
 
+	// Put unit back in center
 	gridunits[uy][ux] = unit;
 
 	return moveCount > 0;
 }
 
+// Mark potential attack targets for the given unit
+
 bool calcAttack(byte unit)
 {
 	UnitInfo	*	info = UnitInfos + (units[unit].type & UNIT_TYPE);
 
+	// Can it shoot at all?
 	if ((info->range & UNIT_INFO_SHOT_DELAY) && !(units[unit].flags & UNIT_FLAG_RESTED))
 		return false;
 
@@ -1130,14 +1146,18 @@ bool calcAttack(byte unit)
 
 	bool	attacking = false;
 
+	// Iterate over all units on the map
 	for(byte i=0; i<numUnits; i++)
 	{
+		// Check only enemy units
 		byte	type = units[i].type;
 		if (team != (type & UNIT_TEAM))
 		{
+			// Ignore inivsible units
 			sbyte tx = units[i].mx, ty = units[i].my;
 			if (!(gridstate[ty][tx] & GS_HIDDEN))
 			{
+				// Finaly check for distance and type
 				if (unit_can_attack(unit, i))
 				{
 					gridstate[ty][tx] |= GS_SELECT;
@@ -1150,6 +1170,7 @@ bool calcAttack(byte unit)
 	return attacking;
 }
 
+// Reset all grid flags
 void resetFlags(void)
 {
 	for(char y=0; y<32; y++)
@@ -1165,6 +1186,7 @@ void resetFlags(void)
 
 }
 
+// Mark all flags threatened by an opposing unit
 void calcThreatened(byte team)
 {
 	for(char i=0; i<numUnits; i++)
@@ -1183,26 +1205,33 @@ void calcThreatened(byte team)
 	}
 }
 
+// Mark all visible grid fields for one team
 void calcVisibility(byte team)
 {
 	for(char i=0; i<numUnits; i++)
 	{
+		// All units of the current team
 		if ((units[i].type & UNIT_TEAM) == team)
 		{
 			UnitInfo	*	info = UnitInfos + (units[i].type & UNIT_TYPE);
 
 			sbyte ux = units[i].mx, uy2 = units[i].my * 2 + (ux & 1);
 
+			// blocked directions
 			byte vmasks[6] = {0, 0, 0, 0, 0, 0};
 
+			// Center field is visible
 			markVisible(ux, uy2, 0);
 
 			byte	range = info->view & UNIT_INFO_RANGE;
 			byte	airborne = info->view & UNIT_INFO_AIRBORNE ? 0 : 1;
 
+			// Up to the maxium visibility range
 			for(byte s=1; s<range; s++)
 			{
 				byte	m = airborne;
+
+				// Check six outside lines of the current ring
 
 				for(byte k=0; k<s; k++)
 				{
@@ -1221,6 +1250,8 @@ void calcVisibility(byte team)
 
 					m <<= 1;
 				}
+
+				// Expand direction mask for next ring
 
 				if (vmasks[1] & 1) vmasks[0] |= m;
 				if (vmasks[2] & 1) vmasks[1] |= m;
@@ -1243,6 +1274,9 @@ void calcVisibility(byte team)
 void initDisplay(void)
 {
 	mmap_set(MMAP_RAM);
+
+	// Expand sprite and font data under IO area, using the
+	// hires bitmap as temporary storage to avoid overlap
 
 	oscar_expand_lzo(Hires, lzosprites);
 	oscar_expand_lzo(Sprmem, lzostatusfont);

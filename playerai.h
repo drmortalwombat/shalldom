@@ -11,6 +11,7 @@ enum AIStrategy
 	AIS_HOLD
 };
 
+// Scripted AI tasks
 struct AITask
 {
 	byte	strategy, mx, my, timeout;

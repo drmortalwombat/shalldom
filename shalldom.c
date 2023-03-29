@@ -26,6 +26,8 @@
 
 int main(void)
 {
+	// Turn all interrupts off
+	
 	cia_init();
 
 	__asm { sei }
@@ -50,6 +52,8 @@ int main(void)
 	sid.fmodevol = 0x0f;
 
 	game_init();
+
+	// Main loop, triggers at max once each frame
 
 	for(;;)
 	{

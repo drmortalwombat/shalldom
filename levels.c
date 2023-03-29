@@ -19,6 +19,8 @@ AITask	aitasks1[] = {
 	{AIS_STROLL + 0 * 8,  3, 15, 0},  // 7 -> 0
 };
 
+// Macros to build compressed level data
+
 #define LEVEL_SEED(x) 							(x & 0xff), (x >> 8)
 #define LEVEL_DAYS(d)							d
 #define LEVEL_PATCH(x, y, d, s, t) 				x, y, d, (s | (t << 5))
@@ -32,46 +34,63 @@ static byte level_num_units[2], level_num_flags[2];
 
 void level_setup_cmd(const char * cmd, bool terrain)
 {
+	// Extract duration from level
+
 	GameDays = cmd[2];
+
+	// Check if we should recreate the terrain, or just rebuild the units
 
 	if (terrain)
 	{
+		// Build the terrain from fixed seed using perlin noise
+
 		terrain_build(cmd[0] + (cmd[1] << 8));
 		cmd += 3;
 
+		// Iterate over patches for e.g. roads
+
 		while (cmd[0] != LEVEL_PATCH_END)
 		{
+			// Direction of patch
 			char	dir = cmd[2];
 
+			// Apply patch
 			if (dir == 6)
 				terrain_patch_circle(cmd[0], cmd[1], cmd[3] & 0x1f, cmd[3] >> 5);
 			else
 				terrain_patch(cmd[0], cmd[1], dir, cmd[3] & 0x1f, cmd[3] >> 5);
 
+			// Next command
 			cmd += 4;
 		}
 	}
 	else
 	{
+		// Skip over terrain data
+
 		cmd += 3;
 		while (cmd[0] != LEVEL_PATCH_END)
 			cmd += 4;
 	}
 	cmd++;
 
+	// Count unit types
 	char	ntype[16];
 
 	for(char i=0; i<16; i++)
 		ntype[i] = 0;
 	numUnits = 0;
 
+	// Reset number of units per team
 	level_num_units[0] = level_num_units[1] = 0;
 	level_num_flags[0] = level_num_flags[1] = 0;
 
+	// Iterate over unit placement commands
 	char	team = UNIT_TEAM_1;
 	char	ti = 0;
 	while (true)
 	{
+		// Extract unit type
 		char	unit = cmd[0] & 0x0f;
 		bool	next = false;
 
@@ -81,15 +100,18 @@ void level_setup_cmd(const char * cmd, bool terrain)
 			next = true;
 		}
 
+		// Add the unit to the map
 		unit_add(unit | team, cmd[1], cmd[2], (cmd[0] >> 4 << 3) | ntype[unit]);
 		cmd += 3;
 		ntype[unit]++;
 
+		// Increment number of flags/squads
 		if (unit == UNIT_COMMAND)
 			level_num_flags[ti]++;
 		else
 			level_num_units[ti]++;
 
+		// Advance to next unit/team
 		if (next)
 		{
 			if (team == UNIT_TEAM_1)
@@ -1022,7 +1044,11 @@ void level_restart(char level)
 	drawBaseGrid();
 	status_init();
 
+	// Rebuild unit info only
+
 	level_setup_cmd(LevelInfos[level].data, false);
+
+	// Remove all non terrain data fromm the grid state
 
 	for(char y=0; y<32; y++)
 	{
@@ -1048,6 +1074,7 @@ void level_setup(char level)
 
 	tovl_show(LevelInfos[level].name, VCOL_YELLOW);
 
+	// Complete terrain and unit data
 
 	level_setup_cmd(LevelInfos[level].data, true);
 
@@ -1058,6 +1085,7 @@ void level_setup(char level)
 	tovl_wait();
 }
 
+// Value of a squad based on number of units
 char unit_count_values[6] = {0, 5, 8, 10, 11, 12};
 
 int level_eval_score(void)
@@ -1067,9 +1095,12 @@ int level_eval_score(void)
 	num_units[0] = num_units[1] = 0;
 	num_flags[0] = num_flags[1] = 0;
 
+	// Iterate over all units for both teams
 	for(char i=0; i<numUnits; i++)
 	{
 		char	uu = units[i].type;
+
+		// Value based on number of units in the squad
 		char	cnt = unit_count_values[units[i].count];
 
 		char	type = uu & UNIT_TYPE;
@@ -1077,12 +1108,14 @@ int level_eval_score(void)
 		if (uu & UNIT_TEAM)
 			ti = 1;
 
+		// Account score
 		if (type == UNIT_COMMAND)
 			num_flags[ti] += cnt;
 		else
 			num_units[ti] += cnt;
 	}
 
+	// Total score is difference of scores for each team
 	int	ucost = 
 		num_flags[0] * 400 / level_num_flags[0] + num_units[0] * 100 / level_num_units[0] -
 		num_flags[1] * 400 / level_num_flags[1] - num_units[1] * 100 / level_num_units[1];

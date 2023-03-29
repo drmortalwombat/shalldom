@@ -24,8 +24,10 @@ extern char		NumPaths;
 extern const sbyte PathX[6];
 extern const sbyte PathY[6];
 
+// Add a path for a unit for next move
 void hex_add_path(char unit);
 
+// Remove path for a unit
 void hex_cancel_path(char unit);
 
 #pragma compile("hexmap.c")

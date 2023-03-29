@@ -82,6 +82,8 @@ void music_play(void)
 	if (!music_enabled)
 		return;
 
+	// Skip every sixth frame if in NTSC to adapt
+	// playback speed
 	if (ntsc)
 	{
 		music_throttle++;
@@ -92,6 +94,9 @@ void music_play(void)
 		}
 	}
 
+	// Count length of track and switch to next
+	// track at end
+
 	tune_count++;
 	if (tune_count == tune_length)
 	{
@@ -100,6 +105,7 @@ void music_play(void)
 			tune_current = tune_queue;
 			tune_length = music_lengths[tune_current];
 
+			// Start next track
 			__asm
 			{
 				lda		tune_queue

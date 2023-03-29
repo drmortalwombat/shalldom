@@ -35,6 +35,8 @@ static const char cammocenter[8] = {
 	VCOL_WHITE,
 };
 
+// title menu texts
+
 static const char * mainmenu_titles[4] = {
 		"SHALLOW\n"
 		" DOMAINS\n"
@@ -163,6 +165,8 @@ void mainmenu_open(void)
 
 	do
 	{
+		// Show or hide title overlay text
+
 		switch (state & 0x3f)
 		{
 		case 0:
@@ -180,12 +184,18 @@ void mainmenu_open(void)
 
 		tovl_check();
 
+		// Draw colored hexagons in background
+
 		mainmenu_anim();
+
+		// Check for joystick or keyboard
 
 		joy_poll(0);
 		keyb_poll();
 
 	} while (!joyb[0] && keyb_codes[keyb_key & 0x7f] != ' ' && keyb_codes[keyb_key & 0x7f] != KEY_RETURN);
+
+	// Now for the interactive part
 
 	MenuMode	mmode = MM_HIDE;
 	
@@ -202,15 +212,21 @@ void mainmenu_open(void)
 		switch (mmode)
 		{
 		case MM_HIDE:
+			// Hide current text overlay
+
 			tovl_hide();
 			mmode = MM_HIDING;
 			break;
 		case MM_HIDING:
+			// Wait until overlay is hidden
+
 			if (tovl_check())
 				mmode = MM_SHOW;
 			break;
 		case MM_SHOW:
 		{
+			// Show next level entry
+
 			char	buffer[50];
 			strcpy(buffer, "LEVEL 00\n");
 			strcat(buffer, LevelInfos[game_level].name);
@@ -232,10 +248,14 @@ void mainmenu_open(void)
 			pentry = 0;
 		} break;
 		case MM_SHOWING:
+			// Wait until level name is fully is visible
 			if (tovl_check())
 				mmode = MM_DISPLAY;
 			break;
 		case MM_DISPLAY:
+			// Check user interaction such as left, right, select
+			// or entry of passcode
+
 			if (keyb_key & 0x80)
 			{
 				char c = keyb_codes[keyb_key & 0x7f];
@@ -259,6 +279,8 @@ void mainmenu_open(void)
 				}
 				else if (c == KEY_DEL && pentry > 0)
 				{
+					// Delete last char of passcode
+
 					pentry--;
 					passcode[pentry] = '.';
 					tovl_text(4, passcode);
@@ -266,6 +288,8 @@ void mainmenu_open(void)
 				}
 				else if (c >= 'a' && c <= 'z' && pentry < 8)
 				{
+					// Add passcode char
+
 					passcode[pentry] = c - 'a' + 'A';
 					pentry++;
 					tovl_text(4, passcode);
@@ -273,12 +297,17 @@ void mainmenu_open(void)
 
 					if (pentry == 8)
 					{
+						// Check for match
+
 						char i = 0;
 						while (i < NUM_LEVELS && strcmp(LevelInfos[i].passcode, passcode))
 							i++;
 						if (i < NUM_LEVELS)
 						{
-						tovl_color(4, VCOL_WHITE);
+							tovl_color(4, VCOL_WHITE);
+
+							// move to matching level, unlock all
+							// in the path
 
 							game_level = i;
 							mmode = MM_HIDE;
@@ -292,12 +321,16 @@ void mainmenu_open(void)
 				}
 				else if (c == ' ' || c == KEY_RETURN)
 				{
+					// Start level
+
 					if (LevelUnlocked[game_level])
 						done = true;				
 				}
 			}
 			else if (joyb[0] && ! bwait)
 			{
+				// Start level
+
 				if (LevelUnlocked[game_level])
 					done = true;				
 			}

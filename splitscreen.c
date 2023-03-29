@@ -15,6 +15,8 @@ bool ntsc;
 
 #define xps		24 + 56
 
+// Table of sprite positions for wipe in/out
+
 static const int sprovlpos[50] = {
 	// 0
 	320 + 24, 320 + 24,
@@ -59,6 +61,7 @@ __interrupt void split_overlay_irq(void)
 	int		x = sprovlpos[sprovlx[k]];
 	char	high = 0;
 
+	// Unrolled sprite update routine
 	if (x < 320 + 24)
 	{
 #assign i 0
@@ -121,11 +124,15 @@ void split_init(void)
 	rirq_write(&rirqtop, 1, &vic.ctrl1, VIC_CTRL1_BMM | VIC_CTRL1_DEN | VIC_CTRL1_RSEL | 3);
 	rirq_call(&rirqtop, 2, split_sidfx_irq);
 
+	// Interrupt for status line
+
 	rirq_build(&rirqbottom, 4); 
 	rirq_delay(&rirqbottom, 10);
 	rirq_write(&rirqbottom, 1, &vic.memptr, 0x24);
 	rirq_write(&rirqbottom, 2, &vic.ctrl1, VIC_CTRL1_DEN | VIC_CTRL1_RSEL | 3);
 	rirq_write(&rirqbottom, 3, &vic.ctrl2, VIC_CTRL2_CSEL);
+
+	// Interrupts for text overlay
 
 	for(int i=0; i<5; i++)
 	{
@@ -133,6 +140,8 @@ void split_init(void)
 		rirq_write(rirqoverlay + i, 0, &ovlline, i);
 		rirq_call(rirqoverlay + i, 1, split_overlay_irq);
 	}
+
+	// Second SID interrupt 2x speed playback
 
 	rirq_build(&rirqsidfx, 1);    
 	rirq_call(&rirqsidfx, 0, split_music_irq);
@@ -153,6 +162,8 @@ void split_init(void)
 
 void split_overlay_show(char mask)
 {
+	// Enable overlay text interrupts
+
 	vic_waitBottom();
 	rirq_wait();
 	for(int i=0; i<5; i++)
@@ -165,6 +176,8 @@ void split_overlay_show(char mask)
 
 void split_overlay_hide(void)
 {
+	// Disable overlay text interrupts
+
 	vic_waitBottom();
 	rirq_wait();
 	for(int i=0; i<5; i++)

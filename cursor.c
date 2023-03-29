@@ -7,6 +7,7 @@
 int cursorX, cursorY;
 char gridX, gridY;
 
+// Calculate grid position from cursor position (in pixel)
 void cursor_togrid(void)
 {
 	sbyte gx = (cursorX - 8) / 24;
@@ -24,15 +25,19 @@ void cursor_togrid(void)
 	gridY = gy;
 }
 
+// Calculate cursor position from grid position
 void cursor_fromgrid(void)
 {
 	cursorX = gridX * 24 + 20;
 	cursorY = gridY * 24 + 49 + 12 * (gridX & 1);
 }
 
+// Set cursor position
 void cursor_init(char cx, char cy)
 {
 	gridX = cx; gridY = cy;
+
+	// Adapt screen position to match cursor
 
 	if (cx < 6)
 		ox = 0;
@@ -50,12 +55,16 @@ void cursor_init(char cx, char cy)
 	else
 		oy = cy - 4;
 
+	// Calculate pixel position
+
 	cursor_fromgrid();
 }
 
 void cursor_show(void)
 {
 	int sx = cursorX - 24 * ox, sy = cursorY - 24 * oy;
+
+	// Three sprites make up the cursor
 
 	spr_set(0, false, sx, sy, 64 + 14, VCOL_RED, true, false, false);
 	spr_set(1, true, sx, sy - 16, 64 + 14, VCOL_WHITE, false, true, true);
@@ -69,6 +78,8 @@ void cursor_hide(void)
 
 void cursor_move(sbyte dx, sbyte dy)
 {
+	// Move cursor in pixel space
+
 	if (dx | dy)
 	{
 		cursorX += dx;
@@ -87,6 +98,8 @@ void cursor_move(sbyte dx, sbyte dy)
 
 	cursor_togrid();
 
+	// Snap to grid position, once movement ends
+
 	if (!(dx | dy))
 	{
 		int tcx = gridX * 24 + 20;
@@ -102,6 +115,8 @@ void cursor_move(sbyte dx, sbyte dy)
 			cursorY ++;
 	}
 
+	// Scroll view to keep cursor on screen
+
 	if (gridX > ox + 10)
 		scroll(1, 0);
 	else if (gridX < ox + 1)
@@ -112,6 +127,8 @@ void cursor_move(sbyte dx, sbyte dy)
 	else if (gridY < oy + 1)
 		scroll( 0, -1);
 
+	// Set sprite position
+	
 	int sx = cursorX - 24 * ox, sy = cursorY - 24 * oy;
 	spr_move(0, sx + 7, sy + 2);
 	spr_move(1, sx, sy - 16);

@@ -70,7 +70,7 @@ void battle_complete(Battle * b);
 
 bool battle_fire(Battle * b);
 
-bool battle_fire_animate(Battle * b, char phase);
+void battle_fire_animate(Battle * b, char phase);
 
 #pragma compile("battle.c")
 

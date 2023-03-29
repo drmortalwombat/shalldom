@@ -6,6 +6,7 @@
 extern RIRQCode	rirqtop, rirqbottom;
 extern RIRQCode	rirqoverlay[5];
 
+// Overlay line status
 extern char sprovlc[5];
 extern char sprovlx[5];
 extern char sprovlimg[5][8];

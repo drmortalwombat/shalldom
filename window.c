@@ -209,6 +209,8 @@ void window_open(char x, char y, char w, char h)
 
 	char	*	wp = winP - 328;
 
+	// Draw top border of window
+
 	char	*	tp = wp;
 	tp[4] |= 0x0f;
 	tp[5] |= 0x0f;
@@ -235,8 +237,12 @@ void window_open(char x, char y, char w, char h)
 	{
 		tp = wp;
 
+		// Draw left border
+
 		for(char j=0; j<8; j++)
 			tp[j] = (tp[j] & 0xf0) | 0x0c;
+
+		// Clear center area
 
 		tp += 8;
 		for(char k=0; k<w; k++)
@@ -245,6 +251,8 @@ void window_open(char x, char y, char w, char h)
 				tp[j] = 0x00;
 			tp += 8;
 		}
+
+		// Draw right border and shadow
 
 		for(char j=0; j<8; j+=2)
 		{
@@ -255,6 +263,8 @@ void window_open(char x, char y, char w, char h)
 		wp += 320;
 	}
 
+	// Draw bottom border and shadow
+	
 	tp = wp;
 	tp[0] = (tp[0] & 0xf0) | 0x0c;
 	tp[1] = (tp[1] & 0xf0) | 0x0c;

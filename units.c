@@ -154,14 +154,17 @@ bool unit_can_attack(char from, char to)
 
 	unsigned	dist = hex_dist_square(u->mx, u->my, eu->mx, eu->my);
 
+	// Unit in valid range?
 	if (dist >= minr && dist <= maxr)
 	{
+		// Check potential damage
 		int	damage;
 		if (eui->view & UNIT_INFO_AIRBORNE)
 			damage = ui->damage >> 4;
 		else
 			damage = ui->damage & UNIT_INFO_DMG_GROUND;
 
+		// Only if can damage
 		return damage > 0;
 	}
 
@@ -178,6 +181,7 @@ int unit_attack_value(char from, char to, bool defender)
 	UnitInfo	*	ui = UnitInfos + (u->type & UNIT_TYPE);
 	UnitInfo	*	eui = UnitInfos + (eu->type & UNIT_TYPE);
 
+	// No success if unit is blocked from firing due to movement (e.g. artillery)
 	if ((ui->range & UNIT_INFO_SHOT_DELAY) && !(u->flags & UNIT_FLAG_RESTED))
 		return 0;
 
@@ -189,6 +193,7 @@ int unit_attack_value(char from, char to, bool defender)
 
 	unsigned	dist = hex_dist_square(u->mx, u->my, eu->mx, eu->my);
 
+	// Check if in attack range
 	if (dist >= minr && dist <= maxr)
 	{
 		unsigned	damage;
@@ -197,6 +202,7 @@ int unit_attack_value(char from, char to, bool defender)
 		else
 			damage = ui->damage & UNIT_INFO_DMG_GROUND;
 
+		// Will it do any damage?
 		if (damage > 0)
 		{
 			unsigned	ns = ui->shots >> 4;
@@ -206,6 +212,7 @@ int unit_attack_value(char from, char to, bool defender)
 			if (!(eui->view & UNIT_INFO_AIRBORNE))
 				agility += ground_agility[0][gridstate[eu->my][eu->mx] & GS_TERRAIN];
 
+			// Expected damage to opponent
 			return damage * ns * u->count * 16 * accuracy / ((2 + eu->count) * ((eui->armour >> 4) + 1) * agility);
 		}
 	}

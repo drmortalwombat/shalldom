@@ -373,7 +373,7 @@ bool battle_fire(Battle * b)
 
 static const char HitColors[] = {VCOL_WHITE, VCOL_YELLOW, VCOL_ORANGE, VCOL_LT_GREY, VCOL_MED_GREY, VCOL_DARK_GREY, VCOL_RED, VCOL_BLACK};
 
-bool battle_fire_animate(Battle * b, char phase)
+void battle_fire_animate(Battle * b, char phase)
 {
 	char si = 0;
 	char step = b->firedShots;

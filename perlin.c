@@ -1,6 +1,8 @@
 
 #include "perlin.h"
 
+// Share shuffle space with other temporary data
+
 #pragma section( perlin, 0, , , bss)
 
 #pragma region( perlin, 0x0400, 0x0800, , , {perlin} )
@@ -13,6 +15,7 @@ static byte shuffle[256];
 
 #pragma bss(perlin)
 
+// Hash value
 inline unsigned hashIntWard(unsigned k) 
 {
 	unsigned ks = k;
@@ -49,6 +52,8 @@ inline int interpolate2(byte x, byte y, int w00, int w10, int w01, int w11)
 	return w0 + sy * ((w1 - w0) >> 8);
 }
 
+// One octace noise
+
 inline int noise2(int x, int y) 
 {
 	byte ix = x >> 8, iy = y >> 8;
@@ -65,8 +70,12 @@ inline int noise2(int x, int y)
 void mnoise_init(unsigned seed)
 {
 	unsigned s = seed;
+
+	// Reset shuffle array
 	for(unsigned b=0; b<256; b++)
 		shuffle[b] = b;
+
+	// Build shuffle array from seed
 	for(unsigned b=0; b<256; b++)
 	{
 		s ^= s << 7;
@@ -83,8 +92,12 @@ int mnoise2(int x, int y, byte noct, int phi)
 	int	sum = 0;
 	int	a = 128;
 
+	// Loop over all octaves
 	do {
+		// Add noise from one octave
 		sum += a * (noise2(x, y) >> 6);
+
+		// Next octave
 		x += x;
 		y += y;
 		noct--;

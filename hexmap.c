@@ -40,18 +40,28 @@ void hex_add_path(char unit)
 	Path	*	path = Paths + NumPaths;
 	Unit	*	u = units + unit;
 
+	// start and end position
+
 	path->ex = u->mx; path->ey = u->my;
 	path->sx = u->tx; path->sy = u->ty;
+
+	// Half y grid position for directional movement
 
 	sbyte	x = path->ex, y2 = 2 * path->ey + (path->ex & 1);
 	sbyte	sx = path->sx, sy2 = 2 * path->sy + (path->sx & 1);
 	char	len = 0;
 
+	// Mark start and end position
+
 	gridstate[path->sy][path->sx] |= GS_SELECT;
 	gridstate[path->ey][path->ex] &= ~GS_SELECT;
 
+	// Loop from end to start
+
 	while (len < 8 && (x != sx || y2 != sy2))
 	{		
+		// Find neighbour field with shortest distance to start field
+
 		char mind = 0, mini = 0;
 		for(char i=0; i<6; i++)
 		{
@@ -67,10 +77,15 @@ void hex_add_path(char unit)
 			}
 		}
 
+		// Field to the path and advance
+
 		path->steps[len] = mini;
 		x += PathX[mini]; y2 += PathY[mini];
 		len++;
 	}
+
+	// Clear out remaining fields
+	
 	while (len < 8)
 	{
 		path->steps[len] = 0xff;
@@ -84,11 +99,16 @@ void hex_cancel_path(char unit)
 {
 	Unit	*	u = units + unit;
 
+	// Find path that starts at the given unit current position
+
 	char	i = 0;
 	while (i < NumPaths && (Paths[i].sx != u->tx || Paths[i].sy != u->ty))
 		i++;
+
 	if (i < NumPaths)
 	{
+		// Compact paths
+
 		NumPaths--;
 		while (i < NumPaths)
 		{

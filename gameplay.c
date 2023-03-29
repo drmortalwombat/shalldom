@@ -18,6 +18,7 @@ MovePhases MovePhase, NextPhase;
 GamePhases GamePhase;
 char GameDays;
 
+// Movement phase flags
 const byte MovePhaseFlags[8] = {
 	MOVPHASE_INTERACTIVE | MOVPHASE_ATTACK,
 	MOVPHASE_INTERACTIVE | MOVPHASE_PLAYER | MOVPHASE_TEAM,
@@ -32,6 +33,8 @@ const byte MovePhaseFlags[8] = {
 
 byte 	joybcount, SelectedUnit;
 bool	joyBlockMove;
+
+// Soud effects
 
 const SIDFX	SIDFXDing[1] = {{
 	6400, 2048, 
@@ -241,6 +244,7 @@ void sidfx_play_select(void)
 	sidfx_play(2, SIDFXDing2, 1);
 }
 
+// Play movement sound effect for a unit
 void sidfx_play_move(byte unit)
 {
 	if (unit == UNIT_INFANTRY)
@@ -275,6 +279,8 @@ static const char * PhaseOverlay[] =
 };
 
 void game_invoke_playerai(void);
+
+// Show overlay message at phase start
 
 void game_show_overlay(void)
 {
@@ -324,9 +330,12 @@ void game_begin_phase(void)
 {
 	byte	pflags = MovePhaseFlags[MovePhase];
 
+	// Interactive phase requires an overlay for the user
+
 	if (pflags & MOVPHASE_INTERACTIVE)
 		game_show_overlay();
 
+	// Reset commands for all units
 	for(char i=0; i<numUnits; i++)
 	{
 		units[i].tx = units[i].mx;
@@ -361,6 +370,7 @@ void game_begin_phase(void)
 	{		
 		tovl_wait();
 
+		// Show overlay
 		if (!team)
 		{
 			for(char i=0; i<30; i++)
@@ -371,6 +381,7 @@ void game_begin_phase(void)
 			cursor_show();		
 		}
 
+		// Show status line
 		if (pflags & MOVPHASE_ATTACK)
 		{
 			NumBattlePairs = 0;
@@ -390,10 +401,14 @@ void game_begin_phase(void)
 	}
 }
 
+// Execute all pending battles
+
 void game_execute_battles(void)
 {
 	if (NumBattlePairs == 0)
 		return;
+
+	// Init battle music for attacking team
 
 	if (MovePhaseFlags[MovePhase] & MOVPHASE_TEAM)
 		music_init(rand() & 1 ? TUNE_DEFEND_1 : TUNE_DEFEND_2);
@@ -407,20 +422,31 @@ void game_execute_battles(void)
 		byte	du = BattlePairs[bi].to;
 		if (du != 0xff)
 		{
+			// Scroll attacked unit into view
+
 			hex_scroll_into_view(du);
 	
 			char ux = units[du].mx - ox;
+
+			// Open window on other half of screen, so it does not
+			// occupy the attacked unit
 
 			if (ux < 7)
 				window_open(24, 4, 12, 15);
 			else
 				window_open(4, 4, 12, 15);
 
+			// Disable repair command for attacked unit
+
 			units[du].flags &= ~UNIT_FLAG_REPAIR;
+
+			// Init battle
 
 			battle_init(&b, du);
 
 			sidfx_play_move(units[du].type & UNIT_TYPE);
+
+			// Move defending units into batle window
 
 			for(char phase=0; phase<=16; phase++)
 			{
@@ -428,11 +454,15 @@ void game_execute_battles(void)
 				vic_waitFrame();
 			}
 
+			// Iterate over all battles that include this unit as defender
+
 			for(byte bj=bi; bj<NumBattlePairs; bj++)
 			{
 				if (du == BattlePairs[bj].to)
 				{
 					BattlePairs[bj].to = 0xff;
+
+					// Check if defender is still standing
 
 					if (battle_num_units(&b, CBT_DEFENDER))
 					{
@@ -442,11 +472,15 @@ void game_execute_battles(void)
 
 						sidfx_play_move(units[au].type & UNIT_TYPE);
 
+						// Move attacking units into window
+
 						for(char phase=0; phase<=16; phase++)
 						{
 							battle_enter_units(&b, CBT_ATTACKER, phase);
 							vic_waitFrame();
 						}
+
+						// Have all units fire
 
 						while (battle_fire(&b))
 						{
@@ -457,6 +491,7 @@ void game_execute_battles(void)
 							}
 						}
 
+						// Complete final shots and explosions
 						for(char i=0; i<4; i++)
 						{
 							for(char phase=0; phase<8; phase++)
@@ -466,22 +501,32 @@ void game_execute_battles(void)
 							}				
 						}
 
+						// Return remaining attacking units from battle
+
 						battle_complete_attack(&b);
 					}
 				}
 			}
+
+			// Finish battle
 
 			battle_complete(&b);
 
 			window_fill(0x00);
 			window_close();
 
+			// Draw remaining units
+
 			drawUnits();
 		}
 	}
 
+	// Remove destroyed squads 
+
 	unit_compact();
 	drawUnits();
+
+	// Restart normal game tune
 
 	int score = level_eval_score();
 
@@ -493,12 +538,15 @@ void game_execute_battles(void)
 		music_queue(TUNE_THEME_NEUTRAL);
 }
 
+// Execute repair command for all scheduled squads
+
 void game_execute_repair(void)
 {
 	for(char i=0; i<numUnits; i++)
 	{
 		if (units[i].flags & UNIT_FLAG_REPAIR)
 		{
+			// Repair one unit per squad
 			if (units[i].count < 5)
 				units[i].count++;
 		}
@@ -520,16 +568,22 @@ void game_swap_moves(void)
 //	updateBaseGrid();
 }
 
+// Execute movement phase
+
 void game_execute_moves(void)
 {
 	byte	pflags = MovePhaseFlags[MovePhase];
 	byte 	team = pflags & MOVPHASE_TEAM;
+
+	// Set the rested flag for all units (will be reset, when moved)
 
 	for(char i=0; i<numUnits; i++)
 	{
 		if ((units[i].type & UNIT_TEAM ) == team)
 			units[i].flags |= UNIT_FLAG_RESTED;
 	}
+
+	// Iterate over all planned paths
 
 	for(char pi=0; pi<NumPaths; pi++)
 	{
@@ -540,20 +594,30 @@ void game_execute_moves(void)
 		{
 			char		ui = gridunits[y][x];
 
+			// Scroll non hidden units into view
+
 			if (!(gridstate[y][x] & GS_HIDDEN))
 				hex_scroll_into_view(ui);
 
 			Unit	*	u = units + ui;
+
+			// Reset rested flsg
 
 			u->flags &= ~UNIT_FLAG_RESTED;
 
 			char color = TeamColors[(u->type & UNIT_TEAM) ? 1 : 0];
 			char image = 48 + (u->type & UNIT_TYPE);
 
+			// Put sprite at start position
+
 			spr_set(3, !(gridstate[y][x] & GS_HIDDEN), 0, 0, image, color, true, false, false);
+
+			// Remove sprite pixels from bitmap
 
 			hideUnit(ui);
 			updateGridCell(x, y);
+
+			// find first step (last in list)
 
 			char pi = 8;
 			while (p->steps[pi - 1] == 0xff)
@@ -564,6 +628,8 @@ void game_execute_moves(void)
 
 				pi--;
 				byte	state = gridstate[y][x];
+
+				// Calculate sprite path
 
 				int	ux = (x - ox) * 24 + 28, uy = (y - oy) * 24 + 50 + 12 * (x & 1);
 				char	d = p->steps[pi];
@@ -576,6 +642,7 @@ void game_execute_moves(void)
 				bool visible = !(state & GS_HIDDEN);
 				if (visible)
 				{
+					// Move sprite along path
 					spr_show(3, true);
 					for(char j=0; j<16; j++)
 					{
@@ -588,13 +655,19 @@ void game_execute_moves(void)
 
 			} while (pi > 0);
 
+			// Put image back into bitmap
+
 			moveUnit(ui, x, y);
 			updateGridCell(x, y);
+
+			// Hide sprite
 
 			spr_show(3, false);
 		}
 	}
 }
+
+// Complete movement phase
 
 void game_complete_phase(void)
 {
@@ -636,18 +709,26 @@ void game_complete_phase(void)
 		game_execute_repair();
 	}
 
+	// Advance to next phase
+
 	NextPhase = (MovePhase + 1) & 7;
 
 	if (NextPhase == 0)
 		GameDays--;
 }
 
+// Have AI decide next move for computer plaer
+
 void game_invoke_playerai(void)
 {
 	byte	pflags = MovePhaseFlags[MovePhase];
 	byte	team = pflags & MOVPHASE_TEAM;
 
+	// Advance scripted AI
+
 	playerai_advance(team);
+
+	// Use non scripted tactical AI
 
 	if (pflags & MOVPHASE_ATTACK)
 	{
@@ -661,18 +742,24 @@ void game_invoke_playerai(void)
 	game_complete_phase();
 }
 
+// Player selected a hex field
+
 void game_selecthex(void)
 {
 	byte	pflags = MovePhaseFlags[MovePhase];
 	byte 	team = pflags & MOVPHASE_TEAM;
 
+	// Is no unit selected ?
+
 	if (SelectedUnit == 0xff)
-	{
+	{		
 		if (gridstate[gridY][gridX] & GS_UNIT)
 		{
 			byte	unit = gridunits[gridY][gridX];
 			if ((units[unit].type & (UNIT_TEAM | UNIT_COMMANDED)) == team)
 			{
+				// Select unit
+
 				if (pflags & MOVPHASE_ATTACK)
 				{
 					if (calcAttack(unit))
@@ -703,6 +790,8 @@ void game_selecthex(void)
 	}
 	else if (gridstate[gridY][gridX] & GS_SELECT)
 	{
+		// Remember target for selected squad and mark as commanded
+
 		units[SelectedUnit].type |= UNIT_COMMANDED;
 
 		sidfx_play_select();
@@ -725,6 +814,8 @@ void game_selecthex(void)
 	}
 	else
 	{
+		// Play a fail sound
+
 		sidfx_play_fail();
 
 		resetMovement();
@@ -732,6 +823,8 @@ void game_selecthex(void)
 		SelectedUnit = 0xff;
 	}
 }
+
+// Repair squad on selected hex field
 
 void game_repairhex(void)
 {
@@ -745,6 +838,8 @@ void game_repairhex(void)
 			char ui = gridunits[gridY][gridX];
 			if ((units[ui].type & (UNIT_TEAM | UNIT_COMMANDED)) == team)
 			{
+				// Set repair flag, and mark unit as commanded
+
 				units[ui].type |= UNIT_COMMANDED;
 				units[ui].flags |= UNIT_FLAG_REPAIR;
 				ghostUnit(ui);
@@ -760,6 +855,8 @@ void game_repairhex(void)
 		sidfx_play_fail();
 }
 
+// Undo command plan for unit on selected hex field
+
 void game_undohex(void)
 {
 	if (SelectedUnit == 0xff)
@@ -773,6 +870,8 @@ void game_undohex(void)
 			if ((units[ui].type & (UNIT_TEAM | UNIT_COMMANDED)) == (team | UNIT_COMMANDED))
 			{
 				sidfx_play_undo();
+
+				// Reset command flag and remove target from list
 
 				units[ui].type &= ~UNIT_COMMANDED;
 				if (units[ui].flags & UNIT_FLAG_REPAIR)
@@ -815,6 +914,9 @@ enum JoystickMenu
 
 char	keyRepeatDelay;
 
+// Check for a user interaction that ends a menu or
+// advances to the next phase
+
 bool game_check_continue(void)
 {
 	joy_poll(0);
@@ -831,6 +933,8 @@ bool game_check_continue(void)
 
 	return false;
 }
+
+// Show unit info
 
 void game_show_info(void)
 {
@@ -854,13 +958,19 @@ void game_show_info(void)
 
 }
 
+// Show minimap
+
 void game_show_map(void)
 {
 	cursor_hide();
 
+	// Open window
+
 	window_open(4, 4, 16, 16);
 
 	window_color_rect(0, 0, 16, 16, (VCOL_LT_BLUE << 4) | VCOL_YELLOW);
+
+	// Draw 4x4 pixel square for each grid field
 
 	for(char y=0; y<31; y++)
 	{
@@ -887,14 +997,20 @@ void game_show_map(void)
 
 	int sx = winX * 8 + 24 + 4 * ox, sy = winY * 8 + 50 + 4 * oy;
 
+	// Show the area select sprite
+
 	spr_set(1, true, sx, sy, 48 + 14, VCOL_WHITE, false, true, true);
 
 	sbyte tx = ox, ty = oy;
 
 	while (!game_check_continue())
 	{	
+		// Move area with cursor
+
 		tx += joyx[0]; 
 		ty += joyy[0];
+
+		// Move area with keyboard
 
 		switch (keyb_codes[keyb_key & 0x7f])
 		{
@@ -920,6 +1036,8 @@ void game_show_map(void)
 			break;
 		}
 
+		// Clip area to map
+
 		if (tx < 0)
 			tx = 0;
 		else if (tx > 18)
@@ -939,7 +1057,11 @@ void game_show_map(void)
 
 	spr_show(1, false);
 
+	// Close window
+
 	window_close();
+
+	// Draw playfield at new location
 
 	if (ox != tx || oy != ty)
 	{
@@ -965,6 +1087,8 @@ void game_show_map(void)
 	cursor_show();
 }
 
+// game level completed
+
 void game_victory(void)
 {
 	music_patch_voice3(true);
@@ -982,6 +1106,8 @@ void game_victory(void)
 	tovl_color(3, VCOL_MED_GREY);
 	tovl_color(4, VCOL_WHITE);
 }
+
+// game level failed
 
 void game_defeat(void)
 {
@@ -1030,6 +1156,8 @@ void game_hint(void)
 	cursor_show();
 }
 
+// show ingame menu
+
 void game_menu(void)
 {
 	tovl_show(MenuText, VCOL_ORANGE);
@@ -1042,6 +1170,8 @@ void game_menu(void)
 	{
 		if (game_check_continue())
 		{
+			// Activate menu entry
+
 			if (menu == 0)
 				break;	
 			else if (menu == 1)
@@ -1066,6 +1196,8 @@ void game_menu(void)
 			}
 		}
 
+		// Move menu selection by key
+
 		switch (keyb_codes[keyb_key & 0x7f])
 		{
 		case KEY_CSR_DOWN:
@@ -1083,6 +1215,8 @@ void game_menu(void)
 			}
 			break;
 		}
+
+		// Move menu selection by joystick
 
 		if (joyy[0] > 0)
 		{
@@ -1116,6 +1250,8 @@ void game_menu(void)
 
 	cursor_show();
 
+	// perform action based on menu selection
+
 	switch (action)
 	{
 		case GSA_CONTINUE:
@@ -1136,6 +1272,8 @@ void game_menu(void)
 	}
 }
 
+// Process player input
+
 void game_input(void)
 {
 	byte	pflags = MovePhaseFlags[MovePhase];
@@ -1143,12 +1281,18 @@ void game_input(void)
 	// Keeping the random generator in flow
 	rand();
 
+	// Poll joystick
+
 	joy_poll(0);
 
 	JoystickMenu menu = JM_SELECT;
 
+	// Check if button was down
+
 	if (joybcount)
 	{
+		// Select joystick menu command
+
 		if (joyy[0])
 		{
 			if (joyy[0] < 0)
@@ -1187,10 +1331,14 @@ void game_input(void)
 	}
 	else if (joybcount)
 	{
+		// Joystick button was released
+
 		spr_show(0, false);
 		spr_show(2, false);
 
 		joybcount = 0;
+
+		// Check for joystick menu
 
 		switch (menu)
 		{
@@ -1225,18 +1373,27 @@ void game_input(void)
 	}
 	else if (!joyBlockMove)
 	{
+		// Move cursor
+
 		cursor_move(4 * joyx[0], 4 * joyy[0]);
 	}
 	else if (!(joyx[0] | joyy[0]))
 	{
+		// Release block on joystick movement, if joystick
+		// is centered again
+
 		joyBlockMove = false;
 	}
+
+	// Poll keyboard
 
 	keyb_poll();
 
 	if (keyb_key)
 	{
 		keyRepeatDelay = 8;
+
+		// Check key
 
 		switch (keyb_codes[keyb_key & 0x7f])
 		{
@@ -1303,6 +1460,8 @@ void game_input(void)
 	}
 	else if (keyRepeatDelay == 0)
 	{
+		// Key repeat for cursor movement
+
 		if (key_pressed(KSCAN_CSR_RIGHT))
 		{
 			if (key_shift())
@@ -1323,14 +1482,20 @@ void game_input(void)
 	else
 		keyRepeatDelay--;
 
+	// Show info for unit or grid item under cursor
+
 	if ((gridstate[gridY][gridX] & (GS_UNIT | GS_HIDDEN)) == GS_UNIT)
 		status_update_unit(gridunits[gridY][gridX]);
 	else
 		status_update_unit(SelectedUnit);
 }
 
+// main in game loop
+
 void game_loop_playing(void)
 {
+	// Check if new phase starts
+
 	if (NextPhase != MovePhase)
 	{
 		MovePhase = NextPhase;
@@ -1341,6 +1506,8 @@ void game_loop_playing(void)
 
 	if (pflags & MOVPHASE_INTERACTIVE)
 	{
+		// Have player or ai interact
+
 		byte 	team = pflags & MOVPHASE_TEAM;
 		if (team)
 			game_invoke_playerai();
@@ -1352,6 +1519,8 @@ void game_loop_playing(void)
 }
 
 char game_level;
+
+// main loop
 
 void game_loop(void)
 {

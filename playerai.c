@@ -111,12 +111,16 @@ void playerai_advance(byte team)
 			const AITask	*	task = AITasks + (ua->id >> 3);
 			bool				advance = false;
 
+			// Check if end of script item reached
+
 			if (task->timeout == GameDays)
 				advance = true;
 			else
 			{
 				AIStrategy	ais = task->strategy & AI_STRATEGY;
 				sbyte		dx = task->mx - ua->mx, dy = task->my - ua->my;
+
+				// Distance to potential target
 
 				if (dx < 0) dx = -dx;
 				if (dy < 0) dy = -dy;
@@ -128,12 +132,14 @@ void playerai_advance(byte team)
 				{
 				case AIS_RUSH:
 				case AIS_STROLL:
+					// Target reached, script item complete
 					if (dd <= 1)
 						advance = true;
 					break;
 				}
 			}
 
+			// Advance to next script item
 			if (advance)
 				ua->id = (ua->id & UNIT_ID_DIVISION) | (task->strategy & AI_TASK_ID);
 		}
@@ -154,6 +160,8 @@ void playerai_select_move(byte team)
 
 				calcMovement(i);
 
+				// Check if keeping at location is smart
+
 				byte	maxx = ua->mx, maxy = ua->my;
 				int		maxv = playerai_eval_move(i, maxx, maxy, task) + 10;
 
@@ -163,6 +171,8 @@ void playerai_select_move(byte team)
 					{
 						if (gridstate[y][x] & GS_SELECT)
 						{
+							// Find best target field 
+
 							int	value = playerai_eval_move(i, x, y, task);
 							if (value > maxv)
 							{
@@ -176,6 +186,8 @@ void playerai_select_move(byte team)
 
 				if (maxx != ua->mx || maxy != ua->my)
 				{
+					// Plan movment
+
 					moveUnit(i, maxx, maxy);
 					ua->type |= UNIT_COMMANDED;
 
@@ -183,6 +195,8 @@ void playerai_select_move(byte team)
 				}
 				else
 				{
+					// Plan repair
+
 					ua->type |= UNIT_COMMANDED;
 					ua->flags |= UNIT_FLAG_REPAIR;
 				}
@@ -203,6 +217,8 @@ void playerai_select_battles(byte team)
 
 	for(byte i=0; i<32; i++)
 		tcnt[i] = 0;
+
+	// Collect potential battle pairs
 
 	for(byte i=0; i<numUnits; i++)
 	{
@@ -252,6 +268,8 @@ void playerai_select_battles(byte team)
 		int		maxv = -32768;
 		char	maxp = 0;
 
+		// Find best battle pair
+
 		for(char i=NumBattlePairs; i<battlePairs; i++)
 		{
 			if (BattlePairs[i].value > maxv)
@@ -261,9 +279,13 @@ void playerai_select_battles(byte team)
 			}
 		}
 
+		// Exit if no good pairs anymore
+
 		if (maxv < -32)
 			break;
 
+		// Remove from list of available pairs
+		
 		BattlePair	p = BattlePairs[maxp];
 		BattlePairs[maxp] = BattlePairs[NumBattlePairs];
 		BattlePairs[NumBattlePairs] = p;

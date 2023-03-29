@@ -11,6 +11,8 @@
 extern byte gridstate[32][32];
 extern byte gridunits[32][32];
 
+// Upper four bits in the gridstate array is in game state info
+
 #define GS_UNIT				0x80
 #define GS_GHOST			0x40
 #define GS_SELECT			0x20
@@ -22,12 +24,16 @@ extern byte gridunits[32][32];
 #define GS_TERRAIN			0x07
 #define GS_TERRAINX			0x0f
 
+// Lower three bits in the gridstate array is the terrain type
+
 #define GTERRAIN_SEA		0
 #define GTERRAIN_WATER		1
 #define GTERRAIN_BEACH		2
 #define GTERRAIN_ROAD		3
 #define GTERRAIN_FORREST	4
 #define GTERRAIN_MOUNTAIN	5
+
+// Offset of display screen into hex map
 
 extern char ox = 0, oy = 0;
 

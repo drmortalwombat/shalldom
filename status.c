@@ -1,6 +1,7 @@
 #include "status.h"
 #include <c64/vic.h>
 
+// Display two digit number in status line
 void status_put_number(char pos, char val)
 {
 	char	c = '0';
@@ -29,6 +30,8 @@ void status_init(void)
 	memset(Screen + 24 * 40, ' ', 40);
 	memset(Color + 24 * 40, VCOL_LT_GREY, 40);
 }
+
+// Show progress line
 
 void status_show_progress(const char * action, byte progress)
 {
@@ -65,11 +68,14 @@ void status_show_progress(const char * action, byte progress)
 	}
 }
 
+// Update grid position in status line
 
 void status_update_pos(char x, char y)
 {
 	status_put_number(0, x);
 	status_put_number(3, y);
+
+	// Show terrain under cursor
 
 	char type = gridstate[y][x];
 
@@ -111,6 +117,8 @@ void status_update_state(const char * state, byte color)
 		Color[24 * 40 + STATE_COL + i] = color;
 }
 
+// Show unit info in status line
+
 void status_update_unit(char unit)
 {
 	if (unit != 0xff)
@@ -138,6 +146,8 @@ void status_update_unit(char unit)
 			i++;
 		}
 
+		// Colorize according to team
+		
 		char color = TeamColors[units[unit].type & UNIT_TEAM ? 1 : 0];
 		for(char i=0; i<18; i++)
 			Color[24 * 40 + UNIT_COL + i] = color;

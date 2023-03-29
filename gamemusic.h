@@ -19,14 +19,19 @@ enum Tune
 	TUNE_DEFEND_2,
 };
 
+// Initialize playback of next track immediately
 void music_init(Tune tune);
 
+// Queue next track
 void music_queue(Tune tune);
 
+// Play music, called in interrupt
 void music_play(void);
 
+// Toggle music on/off
 void music_toggle(void);
 
+// Enable voice three for music
 void music_patch_voice3(bool enable);
 
 #pragma compile("gamemusic.c")
